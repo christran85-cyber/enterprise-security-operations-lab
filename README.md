@@ -1,146 +1,178 @@
 # Enterprise Security Operations Lab
 
-![Enterprise Security Operations Lab](images/diagram2.png)
+![Enterprise Security Operations Lab](images/front.png)
 
 ## Overview
 
-This project demonstrates the deployment and operation of an enterprise-style cybersecurity environment built from the ground up using VirtualBox.
+This project demonstrates the deployment and operation of an enterprise-style Security Operations Center (SOC) environment built from the ground up using VirtualBox.
 
-The lab uses primarily free and open-source security tools to simulate the technologies and workflows used by security analysts and Security Operations Center (SOC) teams. Windows 11 and Microsoft Sysmon are included for Windows endpoint monitoring.
+The lab uses primarily free and open-source cybersecurity tools to simulate security monitoring, threat detection, vulnerability management, network analysis, threat intelligence, incident response, digital forensics, SQL security analytics, and security automation.
 
-The project includes:
+The environment was designed around a resource-efficient five-primary-VM architecture. Compatible security services are consolidated, while resource-intensive tools are started only when needed.
 
-* VirtualBox virtualization
-* OPNsense firewall and network segmentation
-* Suricata IDS/IPS
-* Wazuh SIEM/XDR
-* Windows 11 endpoint monitoring
-* Linux endpoint monitoring
-* Sysmon
-* auditd
-* osquery
-* Greenbone/OpenVAS vulnerability scanning
-* Nmap network discovery
-* Wireshark packet analysis
-* MISP threat intelligence
-* DFIR-IRIS incident response
-* YARA detection rules
-* Volatility 3 memory forensics
-* Autopsy digital forensics
-* OWASP ZAP web application security testing
-* PostgreSQL security database
-* SQL security analytics
-* Python security automation
+The project provides hands-on experience with technologies and analyst workflows related to the CompTIA CySA+ CS0-004 certification.
 
-The objective of this project is to gain hands-on experience with security operations, vulnerability management, threat detection, security analytics, incident response, and digital forensics while practicing skills aligned with CompTIA CySA+ CS0-004.
+The lab includes:
 
----
+- VirtualBox
+- OPNsense
+- Suricata
+- Wazuh SIEM/XDR
+- Windows 11
+- Microsoft Sysmon
+- Ubuntu Linux
+- auditd
+- osquery
+- Kali Linux
+- Nmap
+- Wireshark
+- Greenbone/OpenVAS
+- MISP
+- DFIR-IRIS
+- YARA
+- Volatility 3
+- Autopsy
+- OWASP ZAP
+- PostgreSQL
+- SQL security analytics
+- Python security automation
 
-## Environment
-
-| Component         | Purpose                                  |
-| ----------------- | ---------------------------------------- |
-| VirtualBox        | Virtualization platform                  |
-| OPNsense          | Firewall, routing, NAT, and segmentation |
-| Suricata          | Network IDS/IPS                          |
-| Wazuh             | SIEM/XDR and centralized monitoring      |
-| Windows 11        | Windows security endpoint                |
-| Sysmon            | Windows endpoint telemetry               |
-| Ubuntu Linux      | Linux security endpoint                  |
-| auditd            | Linux security auditing                  |
-| osquery           | Endpoint visibility and querying         |
-| Greenbone/OpenVAS | Vulnerability management                 |
-| Nmap              | Network and service discovery            |
-| Wireshark         | Packet capture and analysis              |
-| MISP              | Threat intelligence and IOC management   |
-| DFIR-IRIS         | Incident response and case management    |
-| YARA              | File and malware detection               |
-| Volatility 3      | Memory forensics                         |
-| Autopsy           | Disk and file forensics                  |
-| OWASP ZAP         | Web application security testing         |
-| PostgreSQL        | Security operations database             |
-| Python            | Security automation                      |
+The objective is to create an integrated cybersecurity environment where security events can be generated, detected, investigated, correlated, documented, remediated, and validated.
 
 ---
 
-## Network Topology
+# Environment
 
-The lab uses multiple VirtualBox network segments to simulate an enterprise environment.
+| Component | Purpose |
+|---|---|
+| VirtualBox | Virtualization platform |
+| OPNsense | Firewall, NAT, routing, and segmentation |
+| Suricata | Network IDS/IPS |
+| Windows 11 | Windows enterprise endpoint |
+| Sysmon | Windows endpoint telemetry |
+| Ubuntu Linux | Linux endpoint and controlled target |
+| auditd | Linux security auditing |
+| osquery | Endpoint visibility and querying |
+| Wazuh | SIEM/XDR and centralized monitoring |
+| Kali Linux | SOC analyst workstation |
+| Nmap | Network and service discovery |
+| Wireshark | Packet capture and analysis |
+| Greenbone/OpenVAS | Vulnerability management |
+| MISP | Threat intelligence and IOC management |
+| DFIR-IRIS | Incident response and case management |
+| YARA | File identification and detection |
+| Volatility 3 | Memory forensics |
+| Autopsy | Disk and file forensics |
+| OWASP ZAP | Web application security testing |
+| PostgreSQL | Security operations database |
+| Python | Security automation |
 
-### Security LAN
+---
 
-| Setting  | Value         |
-| -------- | ------------- |
-| Network  | 10.50.10.0/24 |
-| Gateway  | 10.50.10.1    |
-| Firewall | OPNsense      |
-| IDS/IPS  | Suricata      |
+# Virtual Machine Architecture
 
-### DMZ
+The environment uses **five primary virtual machines**.
 
-| Setting  | Value                                            |
-| -------- | ------------------------------------------------ |
-| Network  | 10.50.20.0/24                                    |
-| Gateway  | 10.50.20.1                                       |
-| Purpose  | Isolated security testing and vulnerable systems |
-| Firewall | OPNsense                                         |
+| VM | Role | Primary Tools |
+|---|---|---|
+| VM 1 | Network Security | OPNsense + Suricata |
+| VM 2 | Windows Endpoint | Windows 11 + Sysmon + Wazuh Agent |
+| VM 3 | Linux Endpoint / Target | Ubuntu + auditd + osquery + Wazuh Agent + vulnerable web application |
+| VM 4 | Security Server | Wazuh + PostgreSQL + SecurityOpsDB + Python |
+| VM 5 | SOC Analyst | Kali + Nmap + Wireshark + ZAP + YARA + Volatility 3 |
 
-### Architecture
+## Phase-Specific Tools
+
+Some heavier tools are used only when required:
+
+- Greenbone/OpenVAS
+- MISP
+- DFIR-IRIS
+- Autopsy
+
+This allows the lab to maintain broad security capabilities without requiring every service to run simultaneously.
+
+---
+
+# Network Topology
+
+The environment uses separate VirtualBox network segments.
+
+## Security LAN
+
+| Setting | Value |
+|---|---|
+| Network | 10.50.10.0/24 |
+| Gateway | 10.50.10.1 |
+| Firewall | OPNsense |
+| IDS/IPS | Suricata |
+
+## DMZ
+
+| Setting | Value |
+|---|---|
+| Network | 10.50.20.0/24 |
+| Gateway | 10.50.20.1 |
+| Purpose | Controlled vulnerable services and security testing |
+| Firewall | OPNsense |
+
+## Architecture
 
 ```text
                          INTERNET
                             |
-                     OPNsense Firewall
-                            |
-                         Suricata
-                         IDS / IPS
+                     OPNsense VM
+                 Firewall + Suricata
                             |
               +-------------+-------------+
               |                           |
         SECURITY LAN                     DMZ
        10.50.10.0/24               10.50.20.0/24
               |                           |
-     +--------+--------+             Vulnerable
-     |        |        |             Web Server
- Windows   Ubuntu    Security
- Endpoint  Endpoint  Services
-     |        |        |
-     +--------+--------+
+       +------+------+              Ubuntu Target
+       |             |              + Web App
+   Windows 11      Kali
+   Endpoint       Analyst
+       |             |
+       +------+------+
               |
-            Wazuh
-              |
-       SecurityOpsDB
-        PostgreSQL
-              |
-            Python
-         Automation
+       Wazuh/Security VM
+       |
+       +-- Wazuh SIEM/XDR
+       +-- PostgreSQL
+       +-- SecurityOpsDB
+       +-- Python Automation
 ```
+
+### Architecture Snapshot
+
+![Network Architecture](images/network-architecture.png)
 
 ---
 
-## Project Objectives
+# Project Objectives
 
-* Build an enterprise-style cybersecurity lab using VirtualBox
-* Configure network segmentation
-* Deploy an enterprise firewall
-* Implement IDS/IPS monitoring
-* Deploy centralized SIEM monitoring
-* Monitor Windows and Linux endpoints
-* Perform network discovery
-* Analyze network packets
-* Perform vulnerability assessments
-* Prioritize vulnerabilities using risk and severity
-* Manage threat intelligence
-* Investigate Indicators of Compromise
-* Perform incident response
-* Conduct memory and disk forensics
-* Create YARA detection rules
-* Perform web application security testing
-* Build a security operations SQL database
-* Analyze security information using SQL
-* Automate security operations using Python
-* Simulate security incidents
-* Document detection and response activities
+- Build an enterprise-style cybersecurity environment in VirtualBox
+- Configure network segmentation
+- Deploy a firewall
+- Implement IDS/IPS monitoring
+- Monitor Windows and Linux endpoints
+- Deploy centralized SIEM/XDR monitoring
+- Collect and correlate security logs
+- Perform network discovery
+- Analyze network traffic
+- Conduct vulnerability assessments
+- Analyze CVSS and prioritize vulnerabilities
+- Perform threat intelligence analysis
+- Investigate Indicators of Compromise
+- Manage incident-response cases
+- Perform file, memory, and disk analysis
+- Test web application security
+- Build a security operations SQL database
+- Apply SQL skills to cybersecurity data
+- Automate security operations with Python
+- Conduct end-to-end SOC investigations
+- Document remediation and validation
 
 ---
 
@@ -148,67 +180,97 @@ The lab uses multiple VirtualBox network segments to simulate an enterprise envi
 
 ## Build the Virtual Lab
 
-VirtualBox is used to create an isolated enterprise cybersecurity environment.
+VirtualBox provides the virtualization platform for the entire project.
 
-### Tasks
+Five primary virtual machines are created.
 
-* Install VirtualBox
-* Create Security LAN
-* Create DMZ
-* Configure virtual network adapters
-* Create project virtual machines
-* Configure NAT connectivity
-* Verify network isolation
+### VM 1 — OPNsense
 
-### Virtual Machines
+- Firewall
+- Routing
+- NAT
+- Network segmentation
+- Suricata IDS/IPS
 
-| VM                  | Purpose                          |
-| ------------------- | -------------------------------- |
-| OPNsense            | Firewall and network security    |
-| Windows 11          | Windows endpoint                 |
-| Ubuntu              | Linux endpoint                   |
-| Wazuh               | SIEM/XDR                         |
-| OpenVAS             | Vulnerability scanner            |
-| Security Server     | PostgreSQL and security services |
-| Analyst Workstation | Security analysis tools          |
-| Vulnerable Server   | Controlled security testing      |
+### VM 2 — Windows 11
 
-### Snapshot 1 — VirtualBox Virtual Machines
+- Windows endpoint
+- Sysmon
+- Wazuh Agent
+- Windows Event Logs
+- PowerShell logging
 
-![VirtualBox Virtual Machines](images/phase1-vms.png)
+### VM 3 — Ubuntu
 
-### Snapshot 2 — VirtualBox Network
+- Linux endpoint
+- auditd
+- osquery
+- Wazuh Agent
+- Controlled vulnerable web application
+
+### VM 4 — Security Server
+
+- Wazuh SIEM/XDR
+- PostgreSQL
+- SecurityOpsDB
+- Python
+
+### VM 5 — Kali Linux
+
+- SOC analyst workstation
+- Nmap
+- Wireshark
+- OWASP ZAP
+- YARA
+- Volatility 3
+
+## Tasks
+
+- Install VirtualBox
+- Create five primary VMs
+- Create Security LAN
+- Create DMZ
+- Configure network adapters
+- Configure internet connectivity
+- Verify communication
+- Verify segmentation
+
+### Snapshot 1 — VirtualBox VM Inventory
+
+![VirtualBox VM Inventory](images/phase1-vms.png)
+
+### Snapshot 2 — VirtualBox Network Configuration
 
 ![VirtualBox Network](images/phase1-network.png)
 
 ### Outcome
 
-The virtual enterprise environment was created with isolated network segments for security monitoring and controlled testing.
+A segmented virtual enterprise environment provides the foundation for the security operations lab.
 
 ---
 
-# Phase 2: OPNsense Firewall
+# Phase 2: OPNsense Firewall and Segmentation
 
-## Configure Network Security
+## Configure OPNsense
 
-OPNsense is deployed as the primary firewall and gateway.
+OPNsense functions as the primary firewall and gateway.
 
 ### Tasks
 
-* Configure WAN
-* Configure Security LAN
-* Configure DMZ
-* Configure NAT
-* Configure DHCP
-* Create firewall rules
-* Configure network segmentation
-* Enable firewall logging
+- Configure WAN
+- Configure Security LAN
+- Configure DMZ
+- Configure NAT
+- Configure DHCP
+- Create firewall rules
+- Restrict inter-network traffic
+- Enable security logging
 
 ### Snapshot 1 — OPNsense Dashboard
 
 ![OPNsense Dashboard](images/phase2-dashboard.png)
 
-### Snapshot 2 — Network Interfaces
+### Snapshot 2 — Interfaces
 
 ![OPNsense Interfaces](images/phase2-interfaces.png)
 
@@ -218,57 +280,61 @@ OPNsense is deployed as the primary firewall and gateway.
 
 ### Outcome
 
-OPNsense provides routing, network segmentation, firewall protection, and centralized network logging.
+Network traffic is segmented, controlled, and logged by the firewall.
 
 ---
 
-# Phase 3: Windows and Linux Endpoint Monitoring
+# Phase 3: Endpoint Security Monitoring
 
-## Windows 11 Endpoint
+## Windows 11
 
-The Windows 11 endpoint represents a standard enterprise workstation.
+The Windows VM represents an enterprise workstation.
 
-### Tools
+### Configuration
 
-* Sysmon
-* Wazuh Agent
-* Windows Event Logs
-* PowerShell logging
+- Sysmon
+- Wazuh Agent
+- Windows Event Logging
+- PowerShell logging
+- Security auditing
 
 ### Snapshot 1 — Windows Endpoint
 
 ![Windows Endpoint](images/phase3-windows.png)
 
-### Snapshot 2 — Sysmon
+### Snapshot 2 — Sysmon Events
 
-![Sysmon Events](images/phase3-sysmon.png)
+![Sysmon](images/phase3-sysmon.png)
 
-### Snapshot 3 — Windows Wazuh Agent
+### Snapshot 3 — Wazuh Agent
 
-![Windows Wazuh Agent](images/phase3-windows-wazuh.png)
+![Windows Wazuh](images/phase3-windows-wazuh.png)
 
-## Linux Endpoint
+---
 
-Ubuntu is used as the Linux enterprise endpoint.
+## Ubuntu Linux
 
-### Tools
+Ubuntu represents a Linux endpoint and controlled security target.
 
-* auditd
-* osquery
-* Wazuh Agent
-* Linux system logs
+### Configuration
 
-### Snapshot 4 — Linux Endpoint
+- auditd
+- osquery
+- Wazuh Agent
+- Authentication logging
+- System logging
 
-![Linux Endpoint](images/phase3-linux.png)
+### Snapshot 4 — Ubuntu Endpoint
 
-### Snapshot 5 — Linux Security Monitoring
+![Ubuntu Endpoint](images/phase3-ubuntu.png)
+
+### Snapshot 5 — Linux Security Logs
 
 ![Linux Monitoring](images/phase3-linux-monitoring.png)
 
 ### Outcome
 
-Windows and Linux endpoint telemetry is generated for security monitoring and investigation.
+Windows and Linux systems generate endpoint telemetry for centralized security monitoring.
 
 ---
 
@@ -276,33 +342,33 @@ Windows and Linux endpoint telemetry is generated for security monitoring and in
 
 ## Centralized Security Monitoring
 
-Wazuh provides centralized security monitoring and alerting.
+Wazuh is deployed on the Security Server.
 
 ### Data Sources
 
-* Windows Event Logs
-* Sysmon
-* Linux logs
-* auditd
-* osquery
-* OPNsense
-* Suricata
+- Windows Event Logs
+- Sysmon
+- Linux logs
+- auditd
+- osquery
+- OPNsense
+- Suricata
 
 ### Monitoring
 
-* Authentication events
-* Process activity
-* File integrity
-* Security alerts
-* Endpoint telemetry
-* Network alerts
-* Vulnerability information
+- Authentication events
+- Process activity
+- File integrity
+- Endpoint telemetry
+- Network events
+- Security alerts
+- Log correlation
 
 ### Snapshot 1 — Wazuh Dashboard
 
 ![Wazuh Dashboard](images/phase4-dashboard.png)
 
-### Snapshot 2 — Wazuh Agents
+### Snapshot 2 — Connected Agents
 
 ![Wazuh Agents](images/phase4-agents.png)
 
@@ -312,7 +378,7 @@ Wazuh provides centralized security monitoring and alerting.
 
 ### Outcome
 
-Security information from multiple systems is collected and analyzed from a centralized SIEM platform.
+Security events from multiple systems can be monitored and correlated from a centralized platform.
 
 ---
 
@@ -320,73 +386,103 @@ Security information from multiple systems is collected and analyzed from a cent
 
 ## Network Threat Detection
 
-Suricata provides intrusion detection and prevention capabilities.
+Suricata runs with OPNsense to monitor network traffic.
 
-### Detection
+### Detection Capabilities
 
-* Port scans
-* Network reconnaissance
-* Suspicious connections
-* Protocol anomalies
-* Known malicious patterns
-* IDS signatures
+- Port scans
+- Reconnaissance
+- Suspicious connections
+- Protocol anomalies
+- IDS signatures
+- Known malicious traffic patterns
 
-### Snapshot 1 — Suricata Configuration
+## Detection Flow
 
-![Suricata Configuration](images/phase5-config.png)
+```text
+Network Traffic
+      |
+      v
+   OPNsense
+      |
+      v
+   Suricata
+      |
+      v
+     Wazuh
+      |
+      v
+   SOC Alert
+```
 
-### Snapshot 2 — Suricata Alert
+### Snapshot 1 — Suricata
+
+![Suricata](images/phase5-suricata.png)
+
+### Snapshot 2 — IDS Alert
 
 ![Suricata Alert](images/phase5-alert.png)
 
-### Snapshot 3 — Wazuh Suricata Alert
+### Snapshot 3 — Alert in Wazuh
 
-![Wazuh Suricata Integration](images/phase5-wazuh.png)
+![Wazuh IDS Alert](images/phase5-wazuh.png)
 
 ### Outcome
 
-Network security events detected by Suricata are forwarded to Wazuh for centralized investigation.
+Network detections can be correlated with endpoint telemetry in Wazuh.
 
 ---
 
-# Phase 6: Nmap and Wireshark
+# Phase 6: Network Security Analysis
 
-## Network Discovery
+## Nmap
 
-Nmap is used to discover hosts, ports, services, and network exposure.
+Nmap is used from the Kali analyst workstation for authorized discovery of the lab environment.
+
+### Tasks
+
+- Host discovery
+- Port identification
+- Service identification
+- Version detection
+- Asset documentation
+
+Example:
 
 ```bash
 nmap -sV 10.50.10.0/24
 ```
 
-### Snapshot 1 — Nmap Discovery
+### Snapshot 1 — Nmap Results
 
-![Nmap Scan](images/phase6-nmap.png)
+![Nmap](images/phase6-nmap.png)
 
-## Packet Analysis
+---
 
-Wireshark is used to capture and investigate network communications.
+## Wireshark
+
+Wireshark provides packet-level analysis.
 
 ### Analysis
 
-* TCP/IP
-* DNS
-* HTTP/HTTPS metadata
-* Network connections
-* Suspicious traffic
-* Protocol behavior
+- TCP/IP
+- DNS
+- HTTP
+- Network connections
+- Protocol behavior
+- Suspicious traffic
 
-### Snapshot 2 — Wireshark Capture
+### Snapshot 2 — Packet Capture
 
-![Wireshark Capture](images/phase6-wireshark.png)
+![Wireshark](images/phase6-wireshark.png)
 
-### Snapshot 3 — Packet Investigation
+### Snapshot 3 — Packet Analysis
 
-![Packet Investigation](images/phase6-packet-analysis.png)
+![Packet Analysis](images/phase6-packet-analysis.png)
 
 ### Outcome
 
-Network discovery and packet analysis provide additional evidence for security investigations.
+Network discovery and packet captures provide evidence for security investigations.
 
 ---
 
@@ -394,38 +490,65 @@ Network discovery and packet analysis provide additional evidence for security i
 
 ## Greenbone/OpenVAS
 
-Greenbone/OpenVAS Community Edition is used to identify vulnerabilities.
+Greenbone/OpenVAS is brought online during vulnerability-management activities.
 
-### Workflow
+It does not need to remain running throughout the entire project.
 
-1. Discover assets
-2. Scan systems
-3. Identify vulnerabilities
-4. Analyze CVSS scores
-5. Prioritize findings
-6. Remediate
-7. Rescan
-8. Validate remediation
+## Vulnerability Lifecycle
 
-### Snapshot 1 — Vulnerability Scan
+```text
+Asset Discovery
+      |
+      v
+Vulnerability Scan
+      |
+      v
+Analyze Findings
+      |
+      v
+CVSS / Risk Priority
+      |
+      v
+Remediation
+      |
+      v
+Rescan
+      |
+      v
+Validation
+```
+
+### Tasks
+
+1. Identify assets
+2. Configure scan targets
+3. Perform scans
+4. Review vulnerabilities
+5. Analyze CVSS
+6. Prioritize findings
+7. Remediate
+8. Rescan
+9. Validate remediation
+
+### Snapshot 1 — OpenVAS Scan
 
 ![OpenVAS Scan](images/phase7-scan.png)
 
-### Snapshot 2 — Vulnerability Results
+### Snapshot 2 — Findings
 
-![OpenVAS Results](images/phase7-results.png)
+![OpenVAS Findings](images/phase7-results.png)
 
 ### Snapshot 3 — Vulnerability Detail
 
 ![Vulnerability Detail](images/phase7-detail.png)
 
-### Snapshot 4 — Remediation Rescan
+### Snapshot 4 — Rescan
 
 ![OpenVAS Rescan](images/phase7-rescan.png)
 
 ### Outcome
 
-The complete vulnerability management lifecycle is demonstrated from discovery through remediation validation.
+The complete vulnerability-management lifecycle is demonstrated.
 
 ---
 
@@ -433,15 +556,11 @@ The complete vulnerability management lifecycle is demonstrated from discovery t
 
 ## PostgreSQL SecurityOpsDB
 
-A PostgreSQL database is created to store and analyze security information.
+PostgreSQL is installed on the Security Server.
 
-### Database Name
+The custom `SecurityOpsDB` database stores security information generated throughout the project.
 
-```text
-SecurityOpsDB
-```
-
-### Database Tables
+## Tables
 
 ```text
 Assets
@@ -457,27 +576,27 @@ RemediationActions
 IncidentAudit
 ```
 
-### SQL Skills
+## SQL Skills Demonstrated
 
-* CREATE TABLE
-* INSERT
-* UPDATE
-* DELETE
-* SELECT
-* WHERE
-* JOIN
-* GROUP BY
-* ORDER BY
-* COUNT
-* SUM
-* AVG
-* Date functions
-* Views
-* Triggers
-* Functions
-* Audit tables
+- CREATE TABLE
+- INSERT
+- UPDATE
+- DELETE
+- SELECT
+- WHERE
+- JOIN
+- GROUP BY
+- ORDER BY
+- COUNT
+- SUM
+- AVG
+- Date/time functions
+- Views
+- Triggers
+- Functions
+- Audit tables
 
-### Example Query
+## Example — Critical Vulnerabilities
 
 ```sql
 SELECT
@@ -491,402 +610,421 @@ GROUP BY Assets.Hostname
 ORDER BY CriticalFindings DESC;
 ```
 
+## Example — Security Events by Source
+
+```sql
+SELECT
+    SourceIP,
+    COUNT(*) AS EventCount
+FROM SecurityEvents
+GROUP BY SourceIP
+ORDER BY EventCount DESC;
+```
+
 ### Snapshot 1 — SecurityOpsDB
 
 ![SecurityOpsDB](images/phase8-database.png)
 
-### Snapshot 2 — Database Tables
+### Snapshot 2 — Tables
 
-![Database Tables](images/phase8-tables.png)
+![SecurityOpsDB Tables](images/phase8-tables.png)
 
-### Snapshot 3 — SQL JOIN
+### Snapshot 3 — JOIN Analysis
 
 ![SQL JOIN](images/phase8-join.png)
 
 ### Snapshot 4 — Security Analytics
 
-![SQL Security Analytics](images/phase8-analytics.png)
+![SQL Analytics](images/phase8-analytics.png)
 
-### Snapshot 5 — SQL Trigger and Audit Table
+### Snapshot 5 — Trigger / Audit
 
 ![SQL Audit](images/phase8-audit.png)
 
 ### Outcome
 
-SQL is used to store, correlate, and analyze security information produced by the enterprise lab.
+SQL is used directly for cybersecurity data storage, correlation, investigation, and reporting.
 
 ---
 
-# Phase 9: MISP Threat Intelligence
+# Phase 9: Threat Intelligence with MISP
 
-## Indicator of Compromise Management
+## Threat Intelligence
 
-MISP is used to manage threat intelligence.
+MISP is used as a phase-specific threat intelligence platform.
 
-### Indicators
+### IOC Types
 
-* IP addresses
-* Domains
-* URLs
-* File hashes
-* Malware indicators
+- IP addresses
+- Domains
+- URLs
+- File hashes
+- Threat indicators
 
-### Workflow
-
-```text
-Threat Intelligence
-        |
-       MISP
-        |
-       IOC
-        |
-  Security Logs
-        |
-     Analysis
-```
-
-### Snapshot 1 — MISP Dashboard
-
-![MISP Dashboard](images/phase9-dashboard.png)
-
-### Snapshot 2 — IOC
-
-![MISP IOC](images/phase9-ioc.png)
-
-### Snapshot 3 — IOC Investigation
-
-![IOC Investigation](images/phase9-investigation.png)
-
-### Outcome
-
-Threat intelligence is correlated with network and endpoint security information.
-
----
-
-# Phase 10: DFIR-IRIS Incident Response
-
-## Security Case Management
-
-DFIR-IRIS is used to document and manage security investigations.
-
-### Case Information
-
-* Incident description
-* Severity
-* Affected assets
-* Indicators of Compromise
-* Evidence
-* Investigation notes
-* Timeline
-* Containment actions
-* Remediation
-* Resolution
-
-### Incident Response Lifecycle
-
-```text
-Detection
-   |
-Analysis
-   |
-Investigation
-   |
-Containment
-   |
-Eradication
-   |
-Recovery
-   |
-Lessons Learned
-```
-
-### Snapshot 1 — DFIR-IRIS Dashboard
-
-![DFIR IRIS Dashboard](images/phase10-dashboard.png)
-
-### Snapshot 2 — Incident Case
-
-![Incident Case](images/phase10-case.png)
-
-### Snapshot 3 — Incident Timeline
-
-![Incident Timeline](images/phase10-timeline.png)
-
-### Outcome
-
-Security alerts are transformed into documented incident-response investigations.
-
----
-
-# Phase 11: Digital Forensics
-
-## Autopsy
-
-Autopsy is used for disk and file system forensics.
-
-### Analysis
-
-* Disk examination
-* File system analysis
-* Deleted files
-* Metadata
-* Evidence collection
-* Timeline analysis
-
-### Snapshot 1 — Autopsy
-
-![Autopsy](images/phase11-autopsy.png)
-
-## Volatility 3
-
-Volatility 3 is used for memory forensics.
-
-### Analysis
-
-* Running processes
-* Network connections
-* Memory artifacts
-* Suspicious processes
-
-### Snapshot 2 — Volatility Processes
-
-![Volatility Processes](images/phase11-volatility.png)
-
-### Snapshot 3 — Memory Investigation
-
-![Memory Investigation](images/phase11-memory.png)
-
-### Outcome
-
-Memory and disk evidence is examined during simulated security investigations.
-
----
-
-# Phase 12: YARA Detection
-
-## File Analysis and Detection Rules
-
-YARA rules are created to identify suspicious files.
-
-### Tasks
-
-* Create detection rules
-* Scan files
-* Identify matches
-* Investigate findings
-* Document results
-
-### Snapshot 1 — YARA Rule
-
-![YARA Rule](images/phase12-rule.png)
-
-### Snapshot 2 — YARA Detection
-
-![YARA Detection](images/phase12-detection.png)
-
-### Outcome
-
-Custom detection rules provide additional file and malware identification capabilities.
-
----
-
-# Phase 13: Web Application Security
-
-## OWASP ZAP
-
-OWASP ZAP is used against an intentionally vulnerable web application located inside the isolated DMZ.
-
-### Testing
-
-* Web application discovery
-* Passive scanning
-* Controlled active scanning
-* HTTP analysis
-* Security header analysis
-* Vulnerability identification
-
-All security testing is performed only against systems created specifically for this lab.
-
-### Snapshot 1 — Vulnerable Web Application
-
-![Vulnerable Web Application](images/phase13-webapp.png)
-
-### Snapshot 2 — OWASP ZAP
-
-![OWASP ZAP](images/phase13-zap.png)
-
-### Snapshot 3 — ZAP Findings
-
-![ZAP Findings](images/phase13-findings.png)
-
-### Outcome
-
-Web application vulnerabilities are identified and documented within the isolated security environment.
-
----
-
-# Phase 14: Python Security Automation
-
-## Automate Security Operations
-
-Python is used to automate repetitive SOC and security analysis tasks.
-
-### Automation
-
-* Parse security logs
-* Process JSON data
-* Process CSV data
-* Import vulnerabilities into PostgreSQL
-* Import security events
-* Search for IOCs
-* Query SecurityOpsDB
-* Generate reports
-
-### Workflow
-
-```text
-Security Tools
-      |
-      v
-JSON / CSV / Logs
-      |
-      v
-    Python
-      |
-      v
-Parse / Normalize
-      |
-      v
- PostgreSQL
-      |
-      v
-SQL Analysis
-      |
-      v
-Security Report
-```
-
-### Snapshot 1 — Python Script
-
-![Python Script](images/phase14-script.png)
-
-### Snapshot 2 — Script Execution
-
-![Python Execution](images/phase14-execution.png)
-
-### Snapshot 3 — PostgreSQL Import
-
-![SQL Import](images/phase14-import.png)
-
-### Outcome
-
-Python connects multiple security technologies and automates security data processing and analysis.
-
----
-
-# Phase 15: Enterprise SOC Investigation
-
-## Simulated Security Incidents
-
-Controlled security events are generated against systems owned and isolated inside the VirtualBox environment.
-
-### Scenarios
-
-* Failed login attempts
-* Network reconnaissance
-* Port scanning
-* Suspicious PowerShell activity
-* Unauthorized network connections
-* File integrity changes
-* IOC matches
-* Suspicious files
-* Vulnerability findings
-* Web application security alerts
-
-### Investigation Workflow
+## Workflow
 
 ```text
 Security Event
       |
       v
-Endpoint / Network Telemetry
+Indicator Identified
       |
       v
-Suricata + Wazuh
+     MISP
       |
       v
-SOC Alert
+IOC Correlation
       |
       v
 Investigation
-      |
-      v
-Nmap / Wireshark / YARA / Forensics
-      |
-      v
-SQL Analysis
-      |
-      v
-MISP IOC Correlation
-      |
-      v
-DFIR-IRIS Case
-      |
-      v
+```
+
+### Snapshot 1 — MISP Dashboard
+
+![MISP Dashboard](images/phase9-misp.png)
+
+### Snapshot 2 — IOC
+
+![MISP IOC](images/phase9-ioc.png)
+
+### Snapshot 3 — IOC Correlation
+
+![MISP Investigation](images/phase9-correlation.png)
+
+### Outcome
+
+Threat intelligence is used to enrich and correlate security investigations.
+
+---
+
+# Phase 10: Incident Response with DFIR-IRIS
+
+## Incident Case Management
+
+DFIR-IRIS is used during the incident-response phase.
+
+### Case Information
+
+- Incident description
+- Severity
+- Affected systems
+- IOCs
+- Evidence
+- Investigation notes
+- Timeline
+- Containment
+- Remediation
+- Resolution
+
+## Incident Lifecycle
+
+```text
+Detection
+   |
+   v
+Analysis
+   |
+   v
+Investigation
+   |
+   v
 Containment
-      |
-      v
-Remediation
-      |
-      v
-OpenVAS Rescan
-      |
-      v
-Validation
-      |
-      v
-Final Incident Report
+   |
+   v
+Eradication
+   |
+   v
+Recovery
+   |
+   v
+Lessons Learned
+```
+
+### Snapshot 1 — DFIR-IRIS Dashboard
+
+![DFIR-IRIS](images/phase10-dfir.png)
+
+### Snapshot 2 — Incident Case
+
+![Incident Case](images/phase10-case.png)
+
+### Snapshot 3 — Timeline
+
+![Incident Timeline](images/phase10-timeline.png)
+
+### Outcome
+
+Security investigations are documented and managed as structured incident-response cases.
+
+---
+
+# Phase 11: Digital Forensics and File Analysis
+
+## YARA
+
+YARA rules are created to identify suspicious test files.
+
+### Snapshot 1 — YARA Rule
+
+![YARA Rule](images/phase11-yara-rule.png)
+
+### Snapshot 2 — YARA Detection
+
+![YARA Detection](images/phase11-yara-detection.png)
+
+---
+
+## Volatility 3
+
+Volatility 3 is used for memory analysis.
+
+### Analysis
+
+- Processes
+- Network connections
+- Memory artifacts
+- Suspicious activity
+
+### Snapshot 3 — Volatility
+
+![Volatility](images/phase11-volatility.png)
+
+---
+
+## Autopsy
+
+Autopsy is used when disk or file-system forensic analysis is required.
+
+### Analysis
+
+- File systems
+- Deleted files
+- Metadata
+- Timeline information
+- Evidence artifacts
+
+### Snapshot 4 — Autopsy Investigation
+
+![Autopsy](images/phase11-autopsy.png)
+
+### Outcome
+
+Multiple forensic techniques are used to analyze endpoint evidence.
+
+---
+
+# Phase 12: Web Application Security
+
+## OWASP ZAP
+
+A deliberately vulnerable web application is hosted inside the isolated lab environment.
+
+OWASP ZAP is used from Kali to analyze the application.
+
+### Testing
+
+- Application discovery
+- Passive scanning
+- Controlled active scanning
+- HTTP analysis
+- Security header analysis
+- Vulnerability identification
+
+### Snapshot 1 — Vulnerable Web Application
+
+![Vulnerable Web Application](images/phase12-webapp.png)
+
+### Snapshot 2 — ZAP Scan
+
+![OWASP ZAP](images/phase12-zap.png)
+
+### Snapshot 3 — Findings
+
+![ZAP Findings](images/phase12-findings.png)
+
+### Outcome
+
+Web application security findings are incorporated into the broader security-analysis workflow.
+
+---
+
+# Phase 13: Python Security Automation
+
+## Automation
+
+Python is used to automate repetitive security-analysis tasks.
+
+### Tasks
+
+- Parse logs
+- Process JSON
+- Process CSV
+- Import vulnerability results
+- Import security events
+- Search IOCs
+- Query PostgreSQL
+- Generate reports
+- Calculate security statistics
+
+## Automation Flow
+
+```text
+Wazuh / Suricata / OpenVAS
+            |
+            v
+      Security Data
+            |
+            v
+          Python
+            |
+            v
+     Parse / Normalize
+            |
+            v
+      SecurityOpsDB
+            |
+            v
+       SQL Analysis
+            |
+            v
+      Security Report
+```
+
+### Snapshot 1 — Python Script
+
+![Python Script](images/phase13-python.png)
+
+### Snapshot 2 — Script Execution
+
+![Python Execution](images/phase13-execution.png)
+
+### Snapshot 3 — SQL Import
+
+![Python SQL Import](images/phase13-import.png)
+
+### Outcome
+
+Python connects security data sources with SQL analysis and reduces repetitive analyst work.
+
+---
+
+# Phase 14: Enterprise SOC Investigation
+
+## End-to-End Security Scenario
+
+The final phase integrates the tools and skills demonstrated throughout the project.
+
+Controlled security events are generated only against systems owned and isolated inside the VirtualBox environment.
+
+## Example Events
+
+- Failed authentication
+- Network reconnaissance
+- Port scanning
+- Suspicious PowerShell activity
+- Unexpected network connections
+- File integrity changes
+- Suspicious test files
+- IOC matches
+- Vulnerability findings
+- Web application security findings
+
+## Investigation Workflow
+
+```text
+Controlled Security Event
+          |
+          v
+Endpoint / Network Telemetry
+          |
+          v
+Suricata + Sysmon + auditd
+          |
+          v
+        Wazuh
+          |
+          v
+       SOC Alert
+          |
+          v
+Analyst Investigation
+          |
+          +--> Nmap
+          +--> Wireshark
+          +--> YARA
+          +--> Volatility
+          +--> Autopsy
+          +--> ZAP
+          |
+          v
+      SQL Analysis
+          |
+          v
+     SecurityOpsDB
+          |
+          v
+     MISP Correlation
+          |
+          v
+    DFIR-IRIS Case
+          |
+          v
+      Containment
+          |
+          v
+      Remediation
+          |
+          v
+    OpenVAS Rescan
+          |
+          v
+       Validation
+          |
+          v
+   Final Incident Report
 ```
 
 ### Snapshot 1 — Security Event
 
-![Security Event](images/phase15-event.png)
+![Security Event](images/phase14-event.png)
 
-### Snapshot 2 — Wazuh Alert
+### Snapshot 2 — Wazuh Detection
 
-![Wazuh Alert](images/phase15-wazuh.png)
+![Wazuh Detection](images/phase14-wazuh.png)
 
 ### Snapshot 3 — Suricata Detection
 
-![Suricata Detection](images/phase15-suricata.png)
+![Suricata Detection](images/phase14-suricata.png)
 
-### Snapshot 4 — SOC Investigation
+### Snapshot 4 — Investigation
 
-![SOC Investigation](images/phase15-investigation.png)
+![Investigation](images/phase14-investigation.png)
 
-### Snapshot 5 — SQL Analysis
+### Snapshot 5 — SQL Correlation
 
-![SQL Analysis](images/phase15-sql.png)
+![SQL Analysis](images/phase14-sql.png)
 
 ### Snapshot 6 — MISP Correlation
 
-![MISP Correlation](images/phase15-misp.png)
+![MISP Correlation](images/phase14-misp.png)
 
-### Snapshot 7 — DFIR-IRIS Incident
+### Snapshot 7 — DFIR-IRIS Case
 
-![DFIR IRIS Incident](images/phase15-dfir.png)
+![DFIR-IRIS Case](images/phase14-dfir.png)
 
 ### Snapshot 8 — Remediation
 
-![Remediation](images/phase15-remediation.png)
+![Remediation](images/phase14-remediation.png)
 
-### Snapshot 9 — Validation Rescan
+### Snapshot 9 — Validation
 
-![Validation Rescan](images/phase15-rescan.png)
+![Validation](images/phase14-validation.png)
 
 ### Outcome
 
-The final investigation demonstrates how multiple security technologies work together to detect, investigate, contain, remediate, validate, and document an enterprise security incident.
+The final scenario demonstrates a complete security operations workflow:
+
+**Detect → Analyze → Investigate → Correlate → Respond → Remediate → Validate → Report**
 
 ---
 
@@ -894,49 +1032,50 @@ The final investigation demonstrates how multiple security technologies work tog
 
 ## Security Operations
 
-* SIEM monitoring
-* Endpoint monitoring
-* Network monitoring
-* Log analysis
-* IDS/IPS analysis
-* Firewall analysis
-* Threat intelligence
-* IOC analysis
-* Security automation
+- SIEM/XDR monitoring
+- Endpoint telemetry
+- Network monitoring
+- IDS/IPS analysis
+- Firewall analysis
+- Log analysis
+- IOC analysis
+- Threat intelligence
+- Security automation
 
 ## Vulnerability Management
 
-* Asset discovery
-* Vulnerability scanning
-* CVSS analysis
-* Risk prioritization
-* Remediation
-* Rescanning
-* Validation
+- Asset discovery
+- Vulnerability scanning
+- CVSS analysis
+- Risk prioritization
+- Remediation
+- Rescanning
+- Validation
 
 ## Incident Response
 
-* Detection
-* Analysis
-* Investigation
-* Containment
-* Eradication
-* Recovery
-* Evidence preservation
-* Documentation
-* Lessons learned
+- Detection
+- Analysis
+- Investigation
+- Containment
+- Eradication
+- Recovery
+- Evidence analysis
+- Incident documentation
+- Lessons learned
 
 ## Security Analysis
 
-* Packet analysis
-* Endpoint telemetry
-* Log correlation
-* Network analysis
-* SQL analytics
-* Threat intelligence correlation
-* File analysis
-* Memory analysis
-* Disk forensics
+- Network discovery
+- Packet analysis
+- Endpoint analysis
+- Log correlation
+- SQL security analytics
+- Threat intelligence correlation
+- File analysis
+- Memory analysis
+- Disk forensics
+- Web application analysis
 
 ---
 
@@ -945,39 +1084,41 @@ The final investigation demonstrates how multiple security technologies work tog
 ```text
 VirtualBox
 |
-+-- OPNsense
++-- VM 1: OPNsense
+|   +-- Firewall
+|   +-- NAT
+|   +-- Segmentation
 |   +-- Suricata
 |
-+-- Windows 11
++-- VM 2: Windows 11
 |   +-- Sysmon
 |   +-- Wazuh Agent
 |
-+-- Ubuntu Linux
++-- VM 3: Ubuntu
 |   +-- auditd
 |   +-- osquery
 |   +-- Wazuh Agent
+|   +-- Vulnerable Web Application
 |
-+-- Wazuh SIEM/XDR
++-- VM 4: Security Server
+|   +-- Wazuh
+|   +-- PostgreSQL
+|   +-- SecurityOpsDB
+|   +-- Python
+|
++-- VM 5: Kali Analyst
+    +-- Nmap
+    +-- Wireshark
+    +-- OWASP ZAP
+    +-- YARA
+    +-- Volatility 3
+
+Phase-Specific Tools
 |
 +-- Greenbone/OpenVAS
-|
 +-- MISP
-|
 +-- DFIR-IRIS
-|
-+-- PostgreSQL
-|
-+-- Analyst Workstation
-|   +-- Nmap
-|   +-- Wireshark
-|   +-- OWASP ZAP
-|   +-- YARA
-|   +-- Volatility 3
-|   +-- Autopsy
-|
-+-- Vulnerable Web Application
-|
-+-- Python Automation
++-- Autopsy
 ```
 
 ---
@@ -991,6 +1132,7 @@ enterprise-security-operations-lab/
 |
 +-- images/
 |   +-- front.png
+|   +-- network-architecture.png
 |   +-- phase1-vms.png
 |   +-- phase1-network.png
 |   +-- phase2-dashboard.png
@@ -999,12 +1141,12 @@ enterprise-security-operations-lab/
 |   +-- phase3-windows.png
 |   +-- phase3-sysmon.png
 |   +-- phase3-windows-wazuh.png
-|   +-- phase3-linux.png
+|   +-- phase3-ubuntu.png
 |   +-- phase3-linux-monitoring.png
 |   +-- phase4-dashboard.png
 |   +-- phase4-agents.png
 |   +-- phase4-alerts.png
-|   +-- phase5-config.png
+|   +-- phase5-suricata.png
 |   +-- phase5-alert.png
 |   +-- phase5-wazuh.png
 |   +-- phase6-nmap.png
@@ -1019,32 +1161,31 @@ enterprise-security-operations-lab/
 |   +-- phase8-join.png
 |   +-- phase8-analytics.png
 |   +-- phase8-audit.png
-|   +-- phase9-dashboard.png
+|   +-- phase9-misp.png
 |   +-- phase9-ioc.png
-|   +-- phase9-investigation.png
-|   +-- phase10-dashboard.png
+|   +-- phase9-correlation.png
+|   +-- phase10-dfir.png
 |   +-- phase10-case.png
 |   +-- phase10-timeline.png
-|   +-- phase11-autopsy.png
+|   +-- phase11-yara-rule.png
+|   +-- phase11-yara-detection.png
 |   +-- phase11-volatility.png
-|   +-- phase11-memory.png
-|   +-- phase12-rule.png
-|   +-- phase12-detection.png
-|   +-- phase13-webapp.png
-|   +-- phase13-zap.png
-|   +-- phase13-findings.png
-|   +-- phase14-script.png
-|   +-- phase14-execution.png
-|   +-- phase14-import.png
-|   +-- phase15-event.png
-|   +-- phase15-wazuh.png
-|   +-- phase15-suricata.png
-|   +-- phase15-investigation.png
-|   +-- phase15-sql.png
-|   +-- phase15-misp.png
-|   +-- phase15-dfir.png
-|   +-- phase15-remediation.png
-|   +-- phase15-rescan.png
+|   +-- phase11-autopsy.png
+|   +-- phase12-webapp.png
+|   +-- phase12-zap.png
+|   +-- phase12-findings.png
+|   +-- phase13-python.png
+|   +-- phase13-execution.png
+|   +-- phase13-import.png
+|   +-- phase14-event.png
+|   +-- phase14-wazuh.png
+|   +-- phase14-suricata.png
+|   +-- phase14-investigation.png
+|   +-- phase14-sql.png
+|   +-- phase14-misp.png
+|   +-- phase14-dfir.png
+|   +-- phase14-remediation.png
+|   +-- phase14-validation.png
 |
 +-- sql/
 |   +-- schema.sql
@@ -1066,13 +1207,15 @@ enterprise-security-operations-lab/
 
 # Key Takeaways
 
-This project provides practical experience building and operating an enterprise-style cybersecurity environment from the ground up.
+This project demonstrates the construction and operation of an enterprise-style cybersecurity environment using a resource-efficient five-primary-VM architecture.
 
-The lab integrates network security, endpoint monitoring, vulnerability management, threat intelligence, incident response, digital forensics, SQL security analytics, and Python automation into one environment.
+The lab integrates network security, Windows and Linux endpoint monitoring, SIEM/XDR, IDS/IPS, vulnerability management, threat intelligence, incident response, digital forensics, web application security, SQL analytics, and Python automation.
 
-The project demonstrates how security analysts collect telemetry, identify suspicious activity, investigate alerts, correlate security information, document incidents, remediate vulnerabilities, and validate that security issues have been resolved.
+Instead of assigning every security application its own permanent VM, compatible services are consolidated and resource-intensive tools are used only when required.
 
-SQL and Python are used directly within the security operations workflow for security data analysis, automation, reporting, and incident investigation.
+This approach provides hands-on experience with a broad security toolset while maintaining reasonable CPU and memory requirements.
+
+SQL and Python are integrated directly into the security operations workflow for data analysis, automation, correlation, reporting, and incident investigation.
 
 ---
 
@@ -1080,7 +1223,7 @@ SQL and Python are used directly within the security operations workflow for sec
 
 This project is intended for educational and defensive cybersecurity training purposes only.
 
-All scanning, testing, traffic generation, and security analysis documented in this repository is performed against systems owned and isolated within the VirtualBox lab environment.
+All scanning, testing, traffic generation, vulnerability assessment, and security analysis documented in this repository is performed against systems owned and isolated within the VirtualBox lab environment.
 
 ---
 
@@ -1088,6 +1231,8 @@ All scanning, testing, traffic generation, and security analysis documented in t
 
 **Enterprise Security Operations Lab**
 
-**VirtualBox + OPNsense + Suricata + Wazuh + Greenbone/OpenVAS + Nmap + Wireshark + MISP + DFIR-IRIS + YARA + Volatility 3 + Autopsy + OWASP ZAP + PostgreSQL + Python**
+**5 Primary Virtual Machines + Phase-Specific Security Tools**
 
-**Detect → Analyze → Investigate → Respond → Remediate → Validate → Report**
+**VirtualBox + OPNsense + Suricata + Windows 11 + Sysmon + Ubuntu + auditd + osquery + Wazuh + Kali Linux + Nmap + Wireshark + Greenbone/OpenVAS + MISP + DFIR-IRIS + YARA + Volatility 3 + Autopsy + OWASP ZAP + PostgreSQL + SQL + Python**
+
+**Detect → Analyze → Investigate → Correlate → Respond → Remediate → Validate → Report**
