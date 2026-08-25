@@ -1,6 +1,6 @@
 # Enterprise Security Operations Lab
 
-![Enterprise Security Operations Lab](images/front.png)
+![Enterprise Security Operations Lab](images/diagram2.png)
 
 ## Overview
 
