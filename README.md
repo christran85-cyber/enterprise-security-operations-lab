@@ -146,7 +146,7 @@ The environment uses separate VirtualBox network segments.
 
 ### Architecture Snapshot
 
-![Network Architecture](images/network-architecture.png)
+![Network Architecture](images/arch.png)
 
 ---
 
