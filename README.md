@@ -264,18 +264,6 @@ Connectivity testing confirmed that the Windows 11 endpoint could successfully c
 - DNS resolution (`google.com`) — successful
 - Packet loss — `0%`
 
-### Snapshot 5 — OPNsense Dashboard
-
-![OPNsense Dashboard](images/phase1-opnsense-dashboard.png)
-
-The OPNsense dashboard confirms that the firewall is operational and both network interfaces are active.
-
-- WAN: `10.0.2.15/24`
-- LAN: `10.10.10.1/24`
-- WAN gateway — active
-- Firewall services — operational
-- Internal SOC network — operational
-
 ### Outcome
 
 A segmented virtual enterprise environment provides the foundation for the security operations lab.
@@ -301,7 +289,16 @@ OPNsense functions as the primary firewall and gateway.
 
 ### Snapshot 1 — OPNsense Dashboard
 
-![OPNsense Dashboard](images/phase2-dashboard.png)
+![OPNsense Dashboard](images/phase1-opnsense-dashboard.png)
+
+The OPNsense dashboard confirms that the firewall is operational and both network interfaces are active.
+
+- WAN: `10.0.2.15/24`
+- LAN: `10.10.10.1/24`
+- WAN gateway — active
+- Firewall services — operational
+- Internal SOC network — operational
+
 
 ### Snapshot 2 — Interfaces
 
