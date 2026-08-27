@@ -243,7 +243,7 @@ Five primary virtual machines are created.
 
 ![VirtualBox Network](images/phase1-network.png)
 
-### Snapshot 4 — Windows 11 Network Configuration
+### Snapshot 3 — Windows 11 Network Configuration
 
 ![Windows 11 Network Configuration](images/windows11-opnsense-network-config.png)
 
@@ -253,7 +253,7 @@ The Windows 11 SOC endpoint successfully received an IP address from the OPNsens
 - Subnet Mask: `255.255.255.0`
 - Default Gateway: `10.10.10.1`
 
-### Snapshot 5 — Windows 11 Network Validation
+### Snapshot 4 — Windows 11 Network Validation
 
 ![Windows 11 Network Validation](images/windows11-network-validation.png)
 
