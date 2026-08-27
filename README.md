@@ -278,6 +278,27 @@ OPNsense functions as the primary firewall and gateway.
 
 ![Firewall Rules](images/phase2-firewall-rules.png)
 
+### Snapshot 4 — Windows 11 Network Configuration
+
+![Windows 11 Network Configuration](images/windows11-opnsense-network-config.png)
+
+The Windows 11 SOC endpoint successfully received an IP address from the OPNsense DHCP server on the internal security network.
+
+- IPv4 Address: `10.10.10.123`
+- Subnet Mask: `255.255.255.0`
+- Default Gateway: `10.10.10.1`
+
+### Snapshot 5 — Windows 11 Network Validation
+
+![Windows 11 Network Validation](images/windows11-network-validation.png)
+
+Connectivity testing confirmed that the Windows 11 endpoint could successfully communicate through the OPNsense security gateway.
+
+- OPNsense gateway (`10.10.10.1`) — reachable
+- Internet (`8.8.8.8`) — reachable
+- DNS resolution (`google.com`) — successful
+- Packet loss — `0%`
+
 ### Outcome
 
 Network traffic is segmented, controlled, and logged by the firewall.
