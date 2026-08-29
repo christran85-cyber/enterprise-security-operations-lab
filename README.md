@@ -241,7 +241,7 @@ Five primary virtual machines are created.
 
 ### Snapshot 2 — VirtualBox Network Configuration
 
-![VirtualBox Network](images/phase1-network.png)
+![VirtualBox Network](images/phase1-network-kali.png)
 
 ### Snapshot 3 — Windows 11 Network Configuration
 
