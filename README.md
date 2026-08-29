@@ -237,7 +237,7 @@ Five primary virtual machines are created.
 
 ### Snapshot 1 — VirtualBox VM Inventory
 
-![VirtualBox VM Inventory](images/phase1-vms.png)
+![VirtualBox VM Inventory](images/phase1-vm-inventory.png)
 
 ### Snapshot 2 — VirtualBox Network Configuration
 
