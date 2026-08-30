@@ -308,6 +308,20 @@ The OPNsense dashboard confirms that the firewall is operational and both networ
 
 ![Firewall Rules](images/phase2-firewall-rules.png)
 
+### Snapshot 4 — DMZ Segmentation Validation
+
+![DMZ Segmentation Validation](images/phase2-segmentation-validation.png)
+
+Firewall logging confirms that traffic originating from the DMZ is blocked from reaching the Security LAN.
+
+- Source: `10.50.20.100` — Ubuntu DMZ endpoint
+- Destination: `10.10.10.123` — Windows 11 Security LAN endpoint
+- Protocol: ICMP
+- Action: Block
+- Firewall rule: `Block AMZ to Security LAN`
+
+The Ubuntu DMZ endpoint retained Internet access while direct communication to the protected Security LAN was denied, validating network segmentation.
+
 ### Outcome
 
 Network traffic is segmented, controlled, and logged by the firewall.
