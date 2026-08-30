@@ -318,7 +318,7 @@ Firewall logging confirms that traffic originating from the DMZ is blocked from 
 - Destination: `10.10.10.123` — Windows 11 Security LAN endpoint
 - Protocol: ICMP
 - Action: Block
-- Firewall rule: `Block AMZ to Security LAN`
+- Firewall rule: `Block DMZ to Security LAN`
 
 The Ubuntu DMZ endpoint retained Internet access while direct communication to the protected Security LAN was denied, validating network segmentation.
 
