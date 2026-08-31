@@ -360,7 +360,7 @@ Windows was also configured to include command-line information inside process c
 
 Windows Event Viewer confirmed successful generation of Security Event ID `4688`.
 
-Event ID 4688 records newly created processes and provides endpoint telemetry that can later be forwarded to Wazuh for centralized monitoring and correlation.
+Event ID 4688 records newly created processes and provides endpoint telemetry that can be forwarded to Wazuh for centralized monitoring and correlation.
 
 Validation confirmed:
 
@@ -384,7 +384,13 @@ Security Event ID `4688` confirms that Windows process creation auditing and com
 
 ![Sysmon Events](images/phase3-sysmon-events.png)
 
-Pending Sysmon deployment and validation.
+Microsoft Sysmon is installed and running on the Windows 11 endpoint.
+
+Windows Event Viewer confirmed Sysmon telemetry in:
+
+`Applications and Services Logs → Microsoft → Windows → Sysmon → Operational`
+
+Sysmon Event ID `1` confirms successful process creation monitoring and provides detailed information including process image, command line, user, parent process, hashes, and process identifiers.
 
 ### Snapshot 4 — Wazuh Agent
 
@@ -396,27 +402,82 @@ The Windows 11 endpoint was successfully registered with the Wazuh manager and v
 
 ## Ubuntu Linux
 
-Ubuntu represents a Linux endpoint and controlled security target.
+Ubuntu represents a Linux endpoint and controlled security target located within the isolated DMZ.
 
 ### Configuration
 
-- [ ] auditd
-- [ ] osquery
-- [ ] Wazuh Agent
-- [ ] Authentication logging
-- [ ] System logging
+- [x] auditd
+- [x] osquery
+- [x] Wazuh Agent
+- [x] Linux audit logging
+- [x] System monitoring
+
+The Ubuntu endpoint is assigned:
+
+- Hostname: `soc-ubuntu`
+- IP Address: `10.50.20.100`
+- Network: DMZ `10.50.20.0/24`
+
+### auditd
+
+Linux auditing was configured using `auditd`.
+
+A controlled test file was monitored using an audit rule with the key:
+
+`audit_test`
+
+The `ausearch` utility successfully retrieved audit records associated with the monitored file.
+
+Captured audit records included:
+
+- SYSCALL
+- PATH
+- PROCTITLE
+- CONFIG_CHANGE
+- User and process information
+- Successful file activity
+
+This confirms that Linux audit events are being recorded for security analysis.
+
+### osquery
+
+osquery was installed to provide additional endpoint visibility and system querying capabilities.
+
+The `osqueryd` daemon was enabled and verified as running.
+
+osquery provides visibility into operating system information, processes, users, networking, and other endpoint data that can support security investigations.
+
+### Wazuh Agent
+
+The Wazuh Agent was installed and configured on the Ubuntu endpoint.
+
+The agent successfully authenticated with the Wazuh manager and established a connection to:
+
+`10.10.10.102:1514/TCP`
+
+OPNsense firewall rules allow the Ubuntu DMZ endpoint to communicate with the Wazuh manager over the required Wazuh agent communication port while maintaining DMZ isolation from the remainder of the Security LAN.
 
 ### Snapshot 5 — Ubuntu Endpoint
 
 ![Ubuntu Endpoint](images/phase3-ubuntu.png)
 
-### Snapshot 6 — Linux Security Logs
+The Ubuntu system information confirms the Linux endpoint is running Ubuntu 26.04.1 LTS inside the VirtualBox environment.
 
-![Linux Security Logs](images/phase3-linux-monitoring.png)
+### Snapshot 6 — Linux Security Monitoring
+
+![Linux Security Monitoring](images/phase3-linux-monitoring.png)
+
+`auditd` validation confirms that Linux security events are being recorded and can be queried using `ausearch`.
 
 ### Outcome
 
-Windows process creation auditing is operational and generating detailed endpoint telemetry. Sysmon, Wazuh Agent integration, and Linux endpoint monitoring will be added as Phase 3 deployment continues.
+Endpoint security monitoring is operational across both Windows and Linux systems.
+
+The Windows endpoint generates process telemetry through Windows auditing and Microsoft Sysmon and is connected to the Wazuh manager.
+
+The Ubuntu endpoint generates Linux audit telemetry through auditd, provides endpoint visibility through osquery, and communicates with the Wazuh manager from the isolated DMZ.
+
+Both endpoints are now prepared to provide security telemetry to the centralized Wazuh SIEM/XDR environment used in Phase 4.
 
 ---
 
