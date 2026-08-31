@@ -418,6 +418,8 @@ Ubuntu represents a Linux endpoint and controlled security target.
 
 Windows process creation auditing is operational and generating detailed endpoint telemetry. Sysmon, Wazuh Agent integration, and Linux endpoint monitoring will be added as Phase 3 deployment continues.
 
+---
+
 # Phase 4: Wazuh SIEM/XDR
 
 ## Centralized Security Monitoring
