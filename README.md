@@ -332,7 +332,7 @@ Network traffic is segmented, controlled, and logged by the firewall.
 
 ## Windows 11
 
-The Windows 11 VM represents an enterprise workstation configured to generate detailed endpoint security telemetry for centralized monitoring in Wazuh.
+The Windows 11 VM represents an enterprise workstation configured to generate detailed endpoint security telemetry for centralized security monitoring.
 
 ### Configuration
 
@@ -382,9 +382,13 @@ Security Event ID `4688` confirms that Windows process creation auditing and com
 
 ### Snapshot 3 — Sysmon Events
 
+![Sysmon Events](images/phase3-sysmon.png)
+
 Pending Sysmon deployment and validation.
 
 ### Snapshot 4 — Wazuh Agent
+
+![Windows Wazuh Agent](images/phase3-windows-wazuh.png)
 
 Pending Windows Wazuh Agent deployment and registration.
 
@@ -413,6 +417,9 @@ Ubuntu represents a Linux endpoint and controlled security target.
 ### Outcome
 
 Windows process creation auditing is operational and generating detailed endpoint telemetry. Sysmon, Wazuh Agent integration, and Linux endpoint monitoring will be added as Phase 3 deployment continues.
+
+# Phase 4: Wazuh SIEM/XDR
+
 ## Centralized Security Monitoring
 
 Wazuh is deployed on the Security Server.
