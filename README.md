@@ -336,7 +336,7 @@ The Windows 11 VM represents an enterprise workstation configured to generate de
 
 ### Configuration
 
-- [ ] Sysmon
+- [x] Sysmon
 - [x] Wazuh Agent
 - [x] Windows Event Logging
 - [x] PowerShell logging
