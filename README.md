@@ -382,7 +382,7 @@ Security Event ID `4688` confirms that Windows process creation auditing and com
 
 ### Snapshot 3 — Sysmon Events
 
-![Sysmon Events](images/phase3-sysmon-events.png)
+![Sysmon Events](images/phase3-sysmon.png)
 
 Microsoft Sysmon is installed and running on the Windows 11 endpoint.
 
