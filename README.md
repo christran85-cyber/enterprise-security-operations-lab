@@ -337,9 +337,9 @@ The Windows 11 VM represents an enterprise workstation configured to generate de
 ### Configuration
 
 - [ ] Sysmon
-- [ ] Wazuh Agent
+- [x] Wazuh Agent
 - [x] Windows Event Logging
-- [ ] PowerShell logging
+- [x] PowerShell logging
 - [x] Security auditing
 
 ### Windows Process Creation Auditing
@@ -390,7 +390,7 @@ Pending Sysmon deployment and validation.
 
 ![Windows Wazuh Agent](images/phase3-windows-wazuh.png)
 
-Pending Windows Wazuh Agent deployment and registration.
+The Windows 11 endpoint was successfully registered with the Wazuh manager and verified as an active agent.
 
 ---
 
