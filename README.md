@@ -102,8 +102,8 @@ The environment uses separate VirtualBox network segments.
 
 | Setting | Value |
 |---|---|
-| Network | 10.50.10.0/24 |
-| Gateway | 10.50.10.1 |
+| Network | 10.10.10.0/24 |
+| Gateway | 10.10.10.1 |
 | Firewall | OPNsense |
 | IDS/IPS | Suricata |
 
@@ -127,7 +127,7 @@ The environment uses separate VirtualBox network segments.
               +-------------+-------------+
               |                           |
         SECURITY LAN                     DMZ
-       10.50.10.0/24               10.50.20.0/24
+        10.10.10.0/24               10.50.20.0/24
               |                           |
        +------+------+              Ubuntu Target
        |             |              + Web App
