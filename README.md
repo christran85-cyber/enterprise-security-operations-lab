@@ -382,7 +382,7 @@ Security Event ID `4688` confirms that Windows process creation auditing and com
 
 ### Snapshot 3 — Sysmon Events
 
-![Sysmon Events](images/phase3-sysmon.png)
+![Sysmon Events](images/phase3-sysmon-events.png)
 
 Pending Sysmon deployment and validation.
 
