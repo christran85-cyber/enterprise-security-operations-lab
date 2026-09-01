@@ -394,6 +394,71 @@ The DMZ can reach permitted services while unauthorized DMZ-to-Security-LAN comm
 
 **Phase 2 Status: COMPLETE**
 
+## Phase 2 Troubleshooting and Lessons Learned
+
+Phase 2 demonstrated that firewall validation requires testing both permitted and denied traffic rather than relying on a single connectivity test.
+
+### DMZ Segmentation Validation
+
+The Ubuntu endpoint was placed on the isolated DMZ network while the Windows endpoint remained on the protected Security LAN.
+
+Testing confirmed that the Ubuntu endpoint could retain required network connectivity while direct DMZ-to-Security-LAN communication was blocked.
+
+OPNsense firewall logs were reviewed to verify that the failed connection was caused by the intended firewall policy rather than a network configuration failure.
+
+### Firewall Logging
+
+Firewall logs provided evidence showing:
+
+- Source system
+- Destination system
+- Protocol
+- Firewall action
+- Matching firewall rule
+
+This demonstrated the importance of using firewall logs during troubleshooting instead of assuming that unsuccessful communication indicates a broken network.
+
+### Allowed vs. Blocked Traffic
+
+A properly segmented network should not simply allow or block everything.
+
+The goal is to permit required communication while denying unauthorized communication between security zones.
+
+The validation process followed:
+
+```text
+DMZ Endpoint
+     |
+     +---- Required Traffic ----> Allowed
+     |
+     +---- Security LAN Access -> Blocked
+                                   |
+                                   v
+                             OPNsense Log
+                                   |
+                                   v
+                              Verification
+```
+
+### Firewall Rule Ordering
+
+OPNsense firewall rules must be evaluated in the correct order.
+
+Specific permitted traffic should be defined narrowly while broader segmentation rules continue to protect the Security LAN.
+
+This became especially important later when the Ubuntu Wazuh Agent required TCP port `1514` access to the Wazuh manager without allowing unrestricted DMZ-to-Security-LAN communication.
+
+### Lesson Learned
+
+Network segmentation should be validated from both directions:
+
+1. Confirm traffic that **should be allowed** succeeds.
+2. Confirm traffic that **should be blocked** fails.
+3. Review firewall logs to verify the reason.
+4. Confirm that security controls did not unintentionally remove required connectivity.
+
+This provides stronger evidence that the firewall policy is operating as designed.
+
 ---
 
 # Phase 3: Endpoint Security Monitoring
