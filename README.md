@@ -1219,6 +1219,7 @@ MITRE ATT&CK Mapping
       |
       v
 Document Findings
+```
 
 ---
 
