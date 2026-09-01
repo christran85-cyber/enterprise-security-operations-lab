@@ -1057,7 +1057,7 @@ Wazuh is deployed on the Security Server.
 
 ### Snapshot 1 — Wazuh Dashboard
 
-![Wazuh Dashboard](images/phase4-dashboard.png)
+![Wazuh Dashboard](images/phase4-wazuh-dashboard.png)
 
 ### Snapshot 2 — Connected Agents
 
