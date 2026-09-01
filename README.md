@@ -250,7 +250,7 @@ Five primary virtual machines were created.
 
 ![Windows 11 Network Configuration](images/windows11-opnsense-network-config.png)
 
-The Windows 11 SOC endpoint successfully received an IP address from the OPNsense DHCP server on the internal Security LAN.
+At this stage of the build, the Windows 11 SOC endpoint successfully received an IP address from the OPNsense DHCP server on the internal Security LAN.
 
 - IPv4 Address: `10.10.10.123`
 - Subnet Mask: `255.255.255.0`
@@ -321,12 +321,12 @@ The OPNsense dashboard confirms that the firewall is operational and the require
 Firewall logging confirms that traffic originating from the DMZ is blocked from reaching protected systems on the Security LAN.
 
 - Source: `10.50.20.100` — Ubuntu DMZ endpoint
-- Destination: `10.10.10.123` — Windows 11 Security LAN endpoint
+- Destination: `10.10.10.123` — Windows endpoint at the time of this validation
 - Protocol: ICMP
 - Action: Block
 - Firewall rule: `Block DMZ to Security LAN`
 
-The Ubuntu DMZ endpoint retained Internet access while direct communication to the protected Security LAN was denied, validating network segmentation.
+The Ubuntu DMZ endpoint retained Internet access while direct communication to the protected Security LAN was denied.
 
 ### Outcome
 
@@ -340,11 +340,11 @@ The DMZ can reach permitted services while unauthorized DMZ-to-Security-LAN comm
 
 # Phase 3: Endpoint Security Monitoring
 
-Phase 3 focused on deploying, configuring, and validating endpoint security monitoring across Windows and Linux systems.
+Phase 3 focused on deploying and validating endpoint security monitoring across both Windows and Linux systems.
 
-The objective was to generate detailed endpoint telemetry, configure security logging, deploy Wazuh agents, and verify communication with the centralized Wazuh security server.
+The objective was to generate detailed endpoint telemetry, configure centralized log forwarding, and verify that both endpoints could communicate with the Wazuh security server.
 
-The monitored endpoints are:
+The two monitored endpoints are:
 
 - **SOC-Windows11** — Windows 11 enterprise endpoint
 - **SOC-Ubuntu** — Ubuntu Linux endpoint located in the isolated DMZ
@@ -414,15 +414,15 @@ Security Event ID `4688` confirms that Windows process creation auditing and com
 
 Microsoft Sysmon was installed on the Windows endpoint to provide enhanced endpoint telemetry beyond standard Windows logging.
 
-Sysmon telemetry was verified in:
+Sysmon telemetry is available through:
 
 `Applications and Services Logs → Microsoft → Windows → Sysmon → Operational`
 
 ### Sysmon Process Monitoring
 
-Sysmon Event ID `1` was successfully generated and reviewed.
+Sysmon Event ID `1` was validated.
 
-Event ID `1` records process creation and can provide:
+Event ID `1` records process creation and provides detailed information including:
 
 - Process image
 - Command line
@@ -430,9 +430,8 @@ Event ID `1` records process creation and can provide:
 - Parent process
 - Process ID
 - Parent process ID
-- Process GUID
 - File hashes
-- Additional process metadata
+- Process GUID
 
 ### Snapshot 3 — Sysmon Events
 
@@ -444,11 +443,9 @@ Sysmon Event ID `1` confirms successful process creation monitoring.
 
 ## PowerShell Logging
 
-PowerShell logging was configured to provide additional visibility into PowerShell activity.
+PowerShell logging was configured to provide additional visibility into PowerShell activity on the Windows endpoint.
 
-PowerShell Operational logs were reviewed through:
-
-`Applications and Services Logs → Microsoft → Windows → PowerShell → Operational`
+PowerShell Operational logs were reviewed through Windows Event Viewer.
 
 ### Validation
 
@@ -456,11 +453,11 @@ PowerShell Event ID:
 
 `4104`
 
-was successfully generated and reviewed.
+was generated and reviewed.
 
-Event ID `4104` records PowerShell script-block activity.
+Event ID `4104` records PowerShell script-block activity and provides additional visibility into commands and scripts executed through PowerShell.
 
-This provides additional visibility into commands and scripts executed through PowerShell and can assist with investigations involving suspicious scripting or administrative activity.
+This telemetry can assist with detecting suspicious PowerShell activity commonly associated with administrative abuse, malware, and post-exploitation activity.
 
 ---
 
@@ -468,7 +465,7 @@ This provides additional visibility into commands and scripts executed through P
 
 The Wazuh Agent was installed on the Windows 11 endpoint and registered with the centralized Wazuh manager.
 
-The service was verified using:
+The Wazuh agent service was verified using PowerShell:
 
 ```powershell
 Get-Service wazuhsvc
@@ -480,11 +477,9 @@ The service returned:
 Running
 ```
 
-The endpoint communicates with the Wazuh manager at:
+The Windows endpoint was configured to communicate with the Wazuh manager at:
 
-```text
-10.10.10.102:1514/TCP
-```
+`10.10.10.102:1514/TCP`
 
 Agent logs confirmed:
 
@@ -492,11 +487,32 @@ Agent logs confirmed:
 Connected to the server ([10.10.10.102]:1514/tcp).
 ```
 
-Windows Application event log monitoring was also confirmed through the agent logs:
+Windows Application event log monitoring was also confirmed through the Wazuh agent logs:
 
 ```text
 Analyzing event log: 'Application'.
 ```
+
+### Windows Application Log Validation
+
+A controlled Windows Application event was generated.
+
+The test event contained:
+
+- Log: `Application`
+- Source: `WazuhTest`
+- Event ID: `1001`
+- Level: `Warning`
+- Message: `SOC-LAB TEST: Windows Wazuh logging validation`
+
+The event was verified locally in the Windows Application log.
+
+This validated:
+
+- Windows Application logging
+- Controlled event generation
+- Wazuh Application log monitoring configuration
+- Wazuh Agent connectivity
 
 ### Snapshot 4 — Windows Wazuh Agent
 
@@ -506,48 +522,9 @@ The Windows endpoint is successfully registered with and communicating with the 
 
 ---
 
-## Windows Application Log Validation
-
-A controlled Windows Application event was generated to verify local Windows event logging.
-
-A custom event source was registered using:
-
-```powershell
-New-EventLog -LogName Application -Source "WazuhTest"
-```
-
-A controlled test event was generated:
-
-```powershell
-Write-EventLog -LogName Application -Source "WazuhTest" -EventId 1001 -EntryType Warning -Message "SOC-LAB TEST: Windows Wazuh logging validation"
-```
-
-The event contained:
-
-| Field | Value |
-|---|---|
-| Log | Application |
-| Source | `WazuhTest` |
-| Event ID | `1001` |
-| Level | Warning |
-| Message | `SOC-LAB TEST: Windows Wazuh logging validation` |
-
-PowerShell verification confirmed that the event existed locally in the Windows Application log.
-
-This validated:
-
-- Windows Application logging
-- Controlled event generation
-- Wazuh Application log monitoring configuration
-- Wazuh Agent connectivity
-
-Whether a collected event becomes a Wazuh security alert depends on Wazuh rule matching and alert thresholds. Centralized detection and rule analysis are addressed in Phase 4.
-
----
-
 ## Ubuntu Linux Endpoint
 
-Ubuntu represents a Linux endpoint and controlled security target located within the isolated DMZ.
+The Ubuntu VM represents a Linux endpoint and controlled security target located inside the isolated DMZ.
 
 ### Endpoint Configuration
 
@@ -559,17 +536,18 @@ Ubuntu represents a Linux endpoint and controlled security target located within
 - [x] DMZ-to-Wazuh firewall exception
 - [x] Centralized Wazuh communication
 
-| Setting | Value |
-|---|---|
-| Hostname | `soc-ubuntu` |
-| IP Address | `10.50.20.100` |
-| Network | `10.50.20.0/24` |
-| Gateway | `10.50.20.1` |
-| Network Zone | DMZ |
+The Ubuntu endpoint is assigned:
+
+- Hostname: `soc-ubuntu`
+- IP Address: `10.50.20.100`
+- Network: DMZ `10.50.20.0/24`
+- Gateway: `10.50.20.1`
 
 ### Snapshot 5 — Ubuntu Endpoint
 
 ![Ubuntu Endpoint](images/phase3-ubuntu.png)
+
+The Ubuntu system information confirms that the Linux endpoint is operating inside the isolated VirtualBox DMZ.
 
 ---
 
@@ -577,18 +555,16 @@ Ubuntu represents a Linux endpoint and controlled security target located within
 
 Linux auditing was configured using `auditd`.
 
-A controlled test file was monitored using an audit rule associated with the key:
+A controlled test file was monitored using an audit rule with the key:
 
-```text
-audit_test
-```
+`audit_test`
 
-The `ausearch` utility successfully retrieved records associated with the monitored activity.
+The `ausearch` utility was used to retrieve security events associated with the monitored file.
 
 Example:
 
 ```bash
-sudo ausearch -k audit_test -i
+sudo ausearch -k audit_test
 ```
 
 Captured audit records included:
@@ -606,7 +582,7 @@ Captured audit records included:
 
 ![Linux Security Monitoring](images/phase3-linux-monitoring.png)
 
-The auditd validation confirms that Linux security events are being recorded and can be queried during investigations.
+The auditd validation confirms that Linux security events are being recorded and can be queried using `ausearch`.
 
 ---
 
@@ -614,15 +590,13 @@ The auditd validation confirms that Linux security events are being recorded and
 
 osquery was installed to provide additional endpoint visibility and SQL-based operating-system querying.
 
-The initial installation attempt could not locate the package through the currently configured Ubuntu repositories.
+The default Ubuntu package repositories did not initially provide the required osquery package.
 
 The official osquery repository was therefore added.
 
-During configuration, a malformed repository entry caused an additional package-management issue.
+During installation, a malformed repository entry was identified and corrected before installation could continue successfully.
 
-The repository configuration was corrected, the package index was refreshed, and osquery was successfully installed.
-
-After installation, the `osqueryd` service initially appeared inactive/disabled.
+After installation, the `osqueryd` daemon initially appeared inactive and disabled.
 
 The service was enabled and started using:
 
@@ -636,9 +610,9 @@ Service status was then verified as:
 active (running)
 ```
 
-osquery provides visibility into information such as:
+osquery provides visibility into:
 
-- Operating system information
+- Operating system configuration
 - Running processes
 - Users
 - Network information
@@ -646,19 +620,68 @@ osquery provides visibility into information such as:
 - Services
 - System configuration
 
+This provides an additional endpoint investigation capability alongside auditd and Wazuh.
+
 ---
 
 ## Ubuntu Wazuh Agent
 
 The Wazuh Agent was installed and configured on the Ubuntu endpoint.
 
-The endpoint communicates with the Wazuh manager at:
+The Ubuntu endpoint communicates from:
 
-```text
-10.10.10.102:1514/TCP
+`10.50.20.100`
+
+to the Wazuh manager:
+
+`10.10.10.102`
+
+using:
+
+`TCP 1514`
+
+Because the DMZ is intentionally isolated from the Security LAN, a narrow OPNsense firewall exception was created specifically for Wazuh communication.
+
+The rule permits:
+
+`SOC-Ubuntu → SOC-Wazuh → TCP 1514`
+
+while the broader DMZ-to-Security-LAN blocking policy remains in place.
+
+---
+
+## DMZ-to-Wazuh Connectivity Validation
+
+Standard ICMP testing is not sufficient for validating this connection because ICMP traffic from the DMZ to the Security LAN remains intentionally blocked.
+
+Instead, connectivity was validated against the actual Wazuh service port.
+
+```bash
+nc -vz 10.10.10.102 1514
 ```
 
-The agent successfully authenticated with the Wazuh manager, received a valid key, and established communication.
+Successful connectivity demonstrated that the firewall permits the required Wazuh traffic without removing the broader DMZ isolation policy.
+
+---
+
+## Wazuh Agent Enrollment
+
+During initial Wazuh Agent enrollment, the Ubuntu agent temporarily reported that the Wazuh server was unavailable.
+
+Troubleshooting included reviewing:
+
+```bash
+/var/ossec/logs/ossec.log
+```
+
+The logs initially contained connection warnings before the agent successfully authenticated with the Wazuh manager.
+
+The enrollment process eventually:
+
+1. Contacted the Wazuh manager
+2. Authenticated the endpoint
+3. Received a valid agent key
+4. Established the Wazuh connection
 
 Agent logs ultimately confirmed:
 
@@ -666,62 +689,21 @@ Agent logs ultimately confirmed:
 Connected to the server ([10.10.10.102]:1514/tcp).
 ```
 
----
-
-## DMZ-to-Wazuh Firewall Communication
-
-SOC-Ubuntu resides inside the DMZ:
+A message stating:
 
 ```text
-10.50.20.100
+No authentication password provided
 ```
 
-The Wazuh manager resides inside the Security LAN:
+also appeared during enrollment.
 
-```text
-10.10.10.102
-```
-
-General DMZ-to-Security-LAN communication remains blocked.
-
-A narrow OPNsense firewall exception was therefore configured to permit only the required Wazuh communication:
-
-```text
-SOC-Ubuntu
-10.50.20.100
-      |
-      | TCP 1514
-      v
-   OPNsense
-      |
-      v
-SOC-Wazuh
-10.10.10.102
-```
-
-The narrow allow rule must be evaluated before the broader DMZ-to-Security-LAN blocking rule.
-
----
-
-## DMZ-to-Wazuh Connectivity Validation
-
-ICMP ping was intentionally not used as the primary validation method because ICMP from the DMZ to the Security LAN remains blocked by the segmentation policy.
-
-Instead, the actual Wazuh service port was tested:
-
-```bash
-nc -vz 10.10.10.102 1514
-```
-
-The connection succeeded.
-
-This confirmed that the required Wazuh traffic could traverse the firewall without weakening the broader DMZ isolation policy.
+Because subsequent log entries confirmed successful key exchange, authentication, and connectivity, this message was informational in the successful enrollment sequence rather than evidence that enrollment failed.
 
 ---
 
 ## Ubuntu Security Event Validation
 
-A controlled Linux logging event was generated:
+A controlled logging event was generated on Ubuntu:
 
 ```bash
 sudo logger "SOC-LAB TEST: Ubuntu Wazuh logging validation"
@@ -729,7 +711,7 @@ sudo logger "SOC-LAB TEST: Ubuntu Wazuh logging validation"
 
 The event successfully appeared in the centralized Wazuh environment.
 
-This demonstrated the telemetry path:
+This demonstrated the complete telemetry path:
 
 ```text
 Ubuntu Endpoint
@@ -750,58 +732,147 @@ Wazuh Manager
 
 ---
 
-## Authentication Failure Validation
+### Snapshot 7 — Wazuh Endpoint Telemetry
 
-A controlled failed authentication attempt was generated on the Ubuntu endpoint.
+![Wazuh Endpoint Telemetry](images/phase3-ubuntu-wazuh-failed-auth-detection.png)
 
-Wazuh successfully processed the event.
+Wazuh Discover confirms that endpoint telemetry is reaching the centralized Wazuh environment.
 
-The observed detection included:
+The event stream shows telemetry associated with:
 
-| Field | Value |
-|---|---|
-| Endpoint | `soc-ubuntu` |
-| Endpoint IP | `10.50.20.100` |
-| Event Type | Authentication Failure |
-| Rule ID | `5503` |
-| Rule Level | `5` |
-| Description | `PAM: User login failed` |
+- `SOC-Windows11`
+- `soc-ubuntu`
+- Wazuh manager `soc-wazuh`
 
-This provided additional validation that Ubuntu telemetry was successfully reaching the centralized monitoring infrastructure.
+The Windows event shown in the evidence identifies:
 
-Detailed Wazuh alert analysis and correlation are covered in Phase 4.
+- Agent: `SOC-Windows11`
+- Agent IP: `10.10.10.103`
+
+The Ubuntu events identify:
+
+- Agent: `soc-ubuntu`
+- Agent IP: `10.50.20.100`
+
+This provides evidence that both monitored endpoints are communicating with the centralized Wazuh infrastructure.
+
+---
+
+## Ubuntu Authentication Failure Validation
+
+Controlled failed authentication activity was generated on the Ubuntu endpoint.
+
+Wazuh successfully received and processed the resulting authentication events.
+
+### Snapshot 8 — Ubuntu Authentication Failure Detection
+
+![Ubuntu Authentication Failure](images/phase3-wazuh-ubuntu-authentication-failure.png)
+
+A search for:
+
+```text
+"authentication failure"
+```
+
+returned multiple matching Wazuh alerts.
+
+The evidence confirms:
+
+- Rule ID: `5503`
+- Rule Level: `5`
+- Authentication-failure telemetry
+- Multiple matching events
+
+The detailed Wazuh event identified the detection as:
+
+```text
+PAM: User login failed
+```
+
+This demonstrates that Linux authentication telemetry is reaching Wazuh and being processed by the platform's detection rules.
+
+Detailed alert investigation and correlation are covered in Phase 4.
+
+---
+
+### Snapshot 9 — Ubuntu Wazuh Alert Validation
+
+![Ubuntu Wazuh Alert Validation](images/ubuntu-wazuh-alert-validation.png)
+
+The controlled Ubuntu logging test:
+
+```bash
+sudo logger "SOC-LAB TEST: Ubuntu Wazuh logging validation"
+```
+
+was successfully located in Wazuh Discover.
+
+The event confirms:
+
+- Agent: `soc-ubuntu`
+- Agent IP: `10.50.20.100`
+- Manager: `soc-wazuh`
+- Controlled test activity successfully reached Wazuh
+- Wazuh rule processing occurred
+
+The event shown in Wazuh included the command:
+
+```text
+/usr/bin/logger SOC-LAB TEST: Ubuntu Wazuh logging validation
+```
+
+This validates the complete endpoint telemetry path:
+
+```text
+Controlled Ubuntu Activity
+          |
+          v
+      Linux Logging
+          |
+          v
+       Wazuh Agent
+          |
+          v
+   OPNsense Firewall
+          |
+      TCP 1514
+          |
+          v
+      Wazuh Manager
+          |
+          v
+     Wazuh Discover
+```
 
 ---
 
 ## Phase 3 Troubleshooting and Lessons Learned
 
-Several configuration and integration problems were encountered during endpoint deployment.
-
-Documenting these issues demonstrates the troubleshooting process used to build and validate the environment.
+Several configuration and integration problems were documented during Phase 3.
 
 ### Windows Event IDs
 
-Windows Security Event ID `4688` and Sysmon Event ID `1` both record process creation activity but originate from different telemetry sources.
+Windows Security Event ID `4688` and Sysmon Event ID `1` both provide process-creation information but originate from different telemetry sources.
 
 | Event | Source | Purpose |
 |---|---|---|
-| `4688` | Windows Security | Process creation auditing |
+| `4688` | Windows Security | Native process creation auditing |
 | `1` | Microsoft Sysmon | Enhanced process creation telemetry |
 | `4104` | PowerShell Operational | PowerShell script-block logging |
 
-An important lesson was to distinguish native Windows Security auditing from Sysmon telemetry.
+Understanding the difference between these telemetry sources is important during endpoint investigations.
 
 ### osquery Installation
 
-Ubuntu initially could not locate the osquery package.
+Ubuntu could not initially locate the osquery package using the default repository configuration.
 
-The official osquery repository had to be added before installation.
+The official osquery repository had to be added.
 
-A malformed repository entry also had to be corrected before package installation could proceed.
+A malformed repository entry was then identified and corrected before installation could proceed.
 
 ### osquery Service
 
-After installation, `osqueryd` initially appeared inactive/disabled.
+After installation, `osqueryd` initially appeared inactive and disabled.
 
 The issue was corrected using:
 
@@ -811,50 +882,39 @@ sudo systemctl enable --now osqueryd
 
 ### Wazuh Agent Connectivity
 
-The Ubuntu Wazuh Agent temporarily reported the server as unavailable during enrollment.
+The Ubuntu Wazuh Agent initially generated server connectivity warnings.
 
-The complete log sequence was reviewed rather than treating the initial warning as a final failure.
+Rather than immediately reinstalling the agent, the logs were reviewed to determine whether communication eventually succeeded.
 
-Subsequent entries confirmed:
+Subsequent log entries confirmed successful authentication and connection to:
 
-- Authentication request
-- Valid key received
-- Successful connection
-- Communication with `10.10.10.102:1514/TCP`
+`10.10.10.102:1514/TCP`
 
-The message:
+### Firewall Validation
 
-```text
-No authentication password provided
-```
+Because the DMZ is intentionally isolated from the Security LAN, a failed ping between Ubuntu and the Security LAN does not necessarily indicate that Wazuh communication is broken.
 
-was informational in this successful enrollment context because subsequent entries confirmed successful authentication and connection.
-
-### ICMP vs TCP Testing
-
-A failed ping from the DMZ does not necessarily indicate that Wazuh communication is unavailable.
-
-The correct service-level test was:
+The actual service port should be tested:
 
 ```bash
 nc -vz 10.10.10.102 1514
 ```
 
-This validated the actual Wazuh TCP service.
+This allows the required Wazuh connection to be tested without weakening the segmentation policy.
 
 ### Firewall Rule Ordering
 
-OPNsense firewall rule ordering matters.
+OPNsense evaluates firewall rules according to their configured order.
 
-The narrow Ubuntu-to-Wazuh TCP `1514` allow rule must be evaluated before the broader DMZ-to-Security-LAN deny rule.
+The narrow Ubuntu-to-Wazuh TCP `1514` allow rule must therefore be evaluated before the broader DMZ-to-Security-LAN blocking rule.
 
-This maintains segmentation while permitting required security telemetry.
+This allows required security telemetry while maintaining network segmentation.
 
 ---
 
 ## Endpoint Troubleshooting Methodology
 
-Phase 3 reinforced the importance of validating each layer individually.
+A major lesson from Phase 3 was to validate each layer individually:
 
 ```text
 Generate Event
@@ -866,13 +926,10 @@ Verify Local Log
 Verify Security Agent
       |
       v
-Verify Network Connectivity
+Verify Network Port
       |
       v
 Verify Firewall Policy
-      |
-      v
-Verify TCP Service Port
       |
       v
 Verify Manager Connection
@@ -881,35 +938,31 @@ Verify Manager Connection
 Verify Centralized Telemetry
 ```
 
-This helps determine whether a problem exists at the:
+This approach makes it easier to determine whether a problem exists at the:
 
 - Endpoint
 - Logging layer
 - Security agent
-- Network
 - Firewall
+- Network
 - Wazuh manager
 - Centralized monitoring layer
 
 ---
 
-## Phase 3 Outcome
+# Phase 3 Outcome
 
 Endpoint security monitoring is operational across both Windows and Linux systems.
 
-### Windows 11
-
-The Windows endpoint now provides:
+The Windows 11 endpoint now provides:
 
 - Windows Security auditing
-- Event ID `4688` process telemetry
+- Event ID `4688` process creation telemetry
 - Command-line process auditing
 - Sysmon Event ID `1` telemetry
 - PowerShell Event ID `4104` logging
-- Windows Application log monitoring
+- Windows Application event monitoring
 - Wazuh Agent connectivity
-
-### Ubuntu Linux
 
 The Ubuntu endpoint now provides:
 
@@ -919,8 +972,11 @@ The Ubuntu endpoint now provides:
 - Wazuh Agent connectivity
 - Controlled DMZ-to-Wazuh communication
 - Authentication-failure telemetry
+- Successful centralized test-event validation
 
-The endpoint telemetry architecture is:
+Both endpoints successfully communicate with the centralized Wazuh infrastructure while maintaining the intended network segmentation.
+
+Phase 3 demonstrates the endpoint telemetry pipeline:
 
 ```text
 Windows 11                         Ubuntu Linux
@@ -938,9 +994,23 @@ Windows 11                         Ubuntu Linux
                Wazuh Manager
 ```
 
+## Phase 3 Evidence
+
+```text
+Snapshot 1 — Windows Endpoint
+Snapshot 2 — Windows Process Creation Auditing
+Snapshot 3 — Sysmon Events
+Snapshot 4 — Windows Wazuh Agent
+Snapshot 5 — Ubuntu Endpoint
+Snapshot 6 — Linux Security Monitoring
+Snapshot 7 — Wazuh Endpoint Telemetry
+Snapshot 8 — Ubuntu Authentication Failure Detection
+Snapshot 9 — Ubuntu Wazuh Alert Validation
+```
+
 **Phase 3 Status: COMPLETE**
 
-The endpoint telemetry infrastructure is now ready for centralized SIEM/XDR monitoring and alert analysis in Phase 4.
+The endpoint telemetry infrastructure is now ready for centralized SIEM/XDR monitoring, alert investigation, correlation, and SOC analyst workflows in Phase 4.
 
 ---
 
@@ -948,7 +1018,7 @@ The endpoint telemetry infrastructure is now ready for centralized SIEM/XDR moni
 
 ## Centralized Security Monitoring
 
-Wazuh is deployed on the Security Server to provide centralized security monitoring, detection, and analysis.
+Wazuh is deployed on the Security Server.
 
 ### Data Sources
 
@@ -970,20 +1040,20 @@ Wazuh is deployed on the Security Server to provide centralized security monitor
 - Network events
 - Security alerts
 - Log correlation
-- Detection rules
 - MITRE ATT&CK mapping
 
 ### Planned Tasks
 
-- Validate connected Windows and Ubuntu agents
-- Review centralized security events
-- Analyze Wazuh detection rules
-- Generate controlled security events
-- Investigate authentication alerts
-- Analyze rule IDs and severity levels
+- Validate centralized agent visibility
+- Analyze Windows security events in Wazuh
+- Analyze Linux security events in Wazuh
+- Investigate Wazuh rule IDs and severity levels
 - Review MITRE ATT&CK mappings
-- Validate Windows telemetry in Wazuh
-- Document SOC analyst workflows
+- Generate controlled detection scenarios
+- Analyze alert context
+- Perform SOC analyst investigations
+- Document alert correlation
+- Capture Phase 4 portfolio evidence
 
 ### Snapshot 1 — Wazuh Dashboard
 
@@ -999,7 +1069,7 @@ Wazuh is deployed on the Security Server to provide centralized security monitor
 
 ### Outcome
 
-Security events from multiple systems can be monitored, detected, analyzed, and correlated from a centralized platform.
+Security events from multiple systems can be monitored, analyzed, and correlated from a centralized platform.
 
 ---
 
@@ -1774,6 +1844,9 @@ enterprise-security-operations-lab/
 |   +-- phase3-windows-wazuh.png
 |   +-- phase3-ubuntu.png
 |   +-- phase3-linux-monitoring.png
+|   +-- phase3-ubuntu-wazuh-failed-auth-detection.png
+|   +-- phase3-wazuh-ubuntu-authentication-failure.png
+|   +-- ubuntu-wazuh-alert-validation.png
 |   +-- phase4-dashboard.png
 |   +-- phase4-agents.png
 |   +-- phase4-alerts.png
@@ -1881,9 +1954,7 @@ All scanning, testing, traffic generation, vulnerability assessment, and securit
 
 # Final Project Goal
 
-**Enterprise Security Operations Lab**
-
-**5 Primary Virtual Machines + Phase-Specific Security Tools**
+The completed Enterprise Security Operations Lab will demonstrate an integrated defensive security environment using:
 
 **VirtualBox + OPNsense + Suricata + Windows 11 + Sysmon + Ubuntu + auditd + osquery + Wazuh + Kali Linux + Nmap + Wireshark + Greenbone/OpenVAS + MISP + DFIR-IRIS + YARA + Volatility 3 + Autopsy + OWASP ZAP + PostgreSQL + SQL + Python**
 
