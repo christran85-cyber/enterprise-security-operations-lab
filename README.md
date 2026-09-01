@@ -273,6 +273,64 @@ A segmented virtual enterprise environment provides the foundation for the secur
 
 **Phase 1 Status: COMPLETE**
 
+## Phase 1 Troubleshooting and Lessons Learned
+
+Several configuration and validation issues were encountered while building the initial VirtualBox environment.
+
+### OPNsense Initial Configuration
+
+During the initial OPNsense installation, the LAN and DHCP configuration required correction before the internal network operated as intended.
+
+The configuration was reviewed and corrected before continuing with the remaining virtual machines.
+
+This reinforced the importance of validating firewall interface assignments and IP addressing before deploying additional systems.
+
+### VirtualBox Network Configuration
+
+The virtual machines required the correct VirtualBox network adapters to communicate through OPNsense.
+
+Network configuration was validated before security tools were installed to ensure later connectivity problems could be separated from endpoint or security-agent problems.
+
+### Windows Network Validation
+
+After the Windows 11 endpoint was connected to the Security LAN, several connectivity layers were tested independently.
+
+Validation included:
+
+- DHCP address assignment
+- Default gateway connectivity
+- Internet connectivity
+- DNS resolution
+
+The Windows endpoint successfully received an address on the Security LAN and used OPNsense as its default gateway.
+
+### Lesson Learned
+
+Network connectivity should be validated in layers:
+
+```text
+Virtual Machine
+      |
+      v
+Network Adapter
+      |
+      v
+IP Configuration
+      |
+      v
+Default Gateway
+      |
+      v
+OPNsense
+      |
+      v
+Internet
+      |
+      v
+DNS Resolution
+```
+
+Testing each layer individually makes later troubleshooting easier because network problems can be separated from security-tool configuration problems.
 ---
 
 # Phase 2: OPNsense Firewall and Segmentation
