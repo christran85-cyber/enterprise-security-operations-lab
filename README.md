@@ -96,14 +96,14 @@ This allows the lab to maintain broad security capabilities without requiring ev
 
 # Network Topology
 
-The environment uses separate VirtualBox network segments.
+The environment uses separate VirtualBox network segments controlled by OPNsense.
 
 ## Security LAN
 
 | Setting | Value |
 |---|---|
-| Network | 10.10.10.0/24 |
-| Gateway | 10.10.10.1 |
+| Network | `10.10.10.0/24` |
+| Gateway | `10.10.10.1` |
 | Firewall | OPNsense |
 | IDS/IPS | Suricata |
 
@@ -111,8 +111,8 @@ The environment uses separate VirtualBox network segments.
 
 | Setting | Value |
 |---|---|
-| Network | 10.50.20.0/24 |
-| Gateway | 10.50.20.1 |
+| Network | `10.50.20.0/24` |
+| Gateway | `10.50.20.1` |
 | Purpose | Controlled vulnerable services and security testing |
 | Firewall | OPNsense |
 
@@ -137,11 +137,14 @@ The environment uses separate VirtualBox network segments.
        +------+------+
               |
        Wazuh/Security VM
-       |
-       +-- Wazuh SIEM/XDR
-       +-- PostgreSQL
-       +-- SecurityOpsDB
-       +-- Python Automation
+              |
+       +------+----------------+
+       |                       |
+   Wazuh SIEM/XDR         PostgreSQL
+                               |
+                         SecurityOpsDB
+                               |
+                        Python Automation
 ```
 
 ### Architecture Snapshot
@@ -182,7 +185,7 @@ The environment uses separate VirtualBox network segments.
 
 VirtualBox provides the virtualization platform for the entire project.
 
-Five primary virtual machines are created.
+Five primary virtual machines were created.
 
 ### VM 1 — OPNsense
 
@@ -226,14 +229,14 @@ Five primary virtual machines are created.
 
 ## Tasks
 
-- Install VirtualBox
-- Create five primary VMs
-- Create Security LAN
-- Create DMZ
-- Configure network adapters
-- Configure internet connectivity
-- Verify communication
-- Verify segmentation
+- [x] Install VirtualBox
+- [x] Create five primary VMs
+- [x] Create Security LAN
+- [x] Create DMZ
+- [x] Configure network adapters
+- [x] Configure internet connectivity
+- [x] Verify communication
+- [x] Verify segmentation
 
 ### Snapshot 1 — VirtualBox VM Inventory
 
@@ -247,7 +250,7 @@ Five primary virtual machines are created.
 
 ![Windows 11 Network Configuration](images/windows11-opnsense-network-config.png)
 
-The Windows 11 SOC endpoint successfully received an IP address from the OPNsense DHCP server on the internal security network.
+The Windows 11 SOC endpoint successfully received an IP address from the OPNsense DHCP server on the internal Security LAN.
 
 - IPv4 Address: `10.10.10.123`
 - Subnet Mask: `255.255.255.0`
@@ -268,37 +271,40 @@ Connectivity testing confirmed that the Windows 11 endpoint could successfully c
 
 A segmented virtual enterprise environment provides the foundation for the security operations lab.
 
+**Phase 1 Status: COMPLETE**
+
 ---
 
 # Phase 2: OPNsense Firewall and Segmentation
 
 ## Configure OPNsense
 
-OPNsense functions as the primary firewall and gateway.
+OPNsense functions as the primary firewall, router, and gateway for the lab environment.
 
 ### Tasks
 
-- Configure WAN
-- Configure Security LAN
-- Configure DMZ
-- Configure NAT
-- Configure DHCP
-- Create firewall rules
-- Restrict inter-network traffic
-- Enable security logging
+- [x] Configure WAN
+- [x] Configure Security LAN
+- [x] Configure DMZ
+- [x] Configure NAT
+- [x] Configure DHCP
+- [x] Create firewall rules
+- [x] Restrict inter-network traffic
+- [x] Enable security logging
+- [x] Validate DMZ segmentation
 
 ### Snapshot 1 — OPNsense Dashboard
 
 ![OPNsense Dashboard](images/phase1-opnsense-dashboard.png)
 
-The OPNsense dashboard confirms that the firewall is operational and both network interfaces are active.
+The OPNsense dashboard confirms that the firewall is operational and the required network interfaces are active.
 
 - WAN: `10.0.2.15/24`
-- LAN: `10.10.10.1/24`
+- Security LAN: `10.10.10.1/24`
+- DMZ: `10.50.20.1/24`
 - WAN gateway — active
 - Firewall services — operational
-- Internal SOC network — operational
-
+- Internal SOC networks — operational
 
 ### Snapshot 2 — Interfaces
 
@@ -312,7 +318,7 @@ The OPNsense dashboard confirms that the firewall is operational and both networ
 
 ![DMZ Segmentation Validation](images/phase2-segmentation-validation.png)
 
-Firewall logging confirms that traffic originating from the DMZ is blocked from reaching the Security LAN.
+Firewall logging confirms that traffic originating from the DMZ is blocked from reaching protected systems on the Security LAN.
 
 - Source: `10.50.20.100` — Ubuntu DMZ endpoint
 - Destination: `10.10.10.123` — Windows 11 Security LAN endpoint
@@ -324,25 +330,45 @@ The Ubuntu DMZ endpoint retained Internet access while direct communication to t
 
 ### Outcome
 
-Network traffic is segmented, controlled, and logged by the firewall.
+Network traffic is segmented, controlled, and logged by OPNsense.
+
+The DMZ can reach permitted services while unauthorized DMZ-to-Security-LAN communication remains blocked.
+
+**Phase 2 Status: COMPLETE**
 
 ---
 
 # Phase 3: Endpoint Security Monitoring
 
-## Windows 11
+Phase 3 focused on deploying, configuring, and validating endpoint security monitoring across Windows and Linux systems.
 
-The Windows 11 VM represents an enterprise workstation configured to generate detailed endpoint security telemetry for centralized security monitoring.
+The objective was to generate detailed endpoint telemetry, configure security logging, deploy Wazuh agents, and verify communication with the centralized Wazuh security server.
+
+The monitored endpoints are:
+
+- **SOC-Windows11** — Windows 11 enterprise endpoint
+- **SOC-Ubuntu** — Ubuntu Linux endpoint located in the isolated DMZ
+
+---
+
+## Windows 11 Endpoint
+
+The Windows 11 VM represents an enterprise workstation configured to generate detailed endpoint security telemetry.
 
 ### Configuration
 
-- [x] Sysmon
+- [x] Microsoft Sysmon
 - [x] Wazuh Agent
-- [x] Windows Event Logging
-- [x] PowerShell logging
-- [x] Security auditing
+- [x] Windows Security auditing
+- [x] Process creation auditing
+- [x] Command-line process logging
+- [x] PowerShell script-block logging
+- [x] Windows Application log monitoring
+- [x] Centralized Wazuh communication
 
-### Windows Process Creation Auditing
+---
+
+## Windows Process Creation Auditing
 
 Advanced Audit Policy was configured to record successful process creation events.
 
@@ -358,9 +384,11 @@ Windows was also configured to include command-line information inside process c
 
 ### Validation
 
-Windows Event Viewer confirmed successful generation of Security Event ID `4688`.
+Windows Event Viewer confirmed successful generation of:
 
-Event ID 4688 records newly created processes and provides endpoint telemetry that can be forwarded to Wazuh for centralized monitoring and correlation.
+`Security Event ID 4688`
+
+Event ID `4688` records newly created processes and provides important endpoint telemetry for security investigations.
 
 Validation confirmed:
 
@@ -380,53 +408,188 @@ Validation confirmed:
 
 Security Event ID `4688` confirms that Windows process creation auditing and command-line logging are operational.
 
+---
+
+## Microsoft Sysmon
+
+Microsoft Sysmon was installed on the Windows endpoint to provide enhanced endpoint telemetry beyond standard Windows logging.
+
+Sysmon telemetry was verified in:
+
+`Applications and Services Logs → Microsoft → Windows → Sysmon → Operational`
+
+### Sysmon Process Monitoring
+
+Sysmon Event ID `1` was successfully generated and reviewed.
+
+Event ID `1` records process creation and can provide:
+
+- Process image
+- Command line
+- User
+- Parent process
+- Process ID
+- Parent process ID
+- Process GUID
+- File hashes
+- Additional process metadata
+
 ### Snapshot 3 — Sysmon Events
 
 ![Sysmon Events](images/phase3-sysmon.png)
 
-Microsoft Sysmon is installed and running on the Windows 11 endpoint.
-
-Windows Event Viewer confirmed Sysmon telemetry in:
-
-`Applications and Services Logs → Microsoft → Windows → Sysmon → Operational`
-
-Sysmon Event ID `1` confirms successful process creation monitoring and provides detailed information including process image, command line, user, parent process, hashes, and process identifiers.
-
-### Snapshot 4 — Wazuh Agent
-
-![Windows Wazuh Agent](images/phase3-windows-wazuh.png)
-
-The Windows 11 endpoint was successfully registered with the Wazuh manager and verified as an active agent.
+Sysmon Event ID `1` confirms successful process creation monitoring.
 
 ---
 
-## Ubuntu Linux
+## PowerShell Logging
+
+PowerShell logging was configured to provide additional visibility into PowerShell activity.
+
+PowerShell Operational logs were reviewed through:
+
+`Applications and Services Logs → Microsoft → Windows → PowerShell → Operational`
+
+### Validation
+
+PowerShell Event ID:
+
+`4104`
+
+was successfully generated and reviewed.
+
+Event ID `4104` records PowerShell script-block activity.
+
+This provides additional visibility into commands and scripts executed through PowerShell and can assist with investigations involving suspicious scripting or administrative activity.
+
+---
+
+## Windows Wazuh Agent
+
+The Wazuh Agent was installed on the Windows 11 endpoint and registered with the centralized Wazuh manager.
+
+The service was verified using:
+
+```powershell
+Get-Service wazuhsvc
+```
+
+The service returned:
+
+```text
+Running
+```
+
+The endpoint communicates with the Wazuh manager at:
+
+```text
+10.10.10.102:1514/TCP
+```
+
+Agent logs confirmed:
+
+```text
+Connected to the server ([10.10.10.102]:1514/tcp).
+```
+
+Windows Application event log monitoring was also confirmed through the agent logs:
+
+```text
+Analyzing event log: 'Application'.
+```
+
+### Snapshot 4 — Windows Wazuh Agent
+
+![Windows Wazuh Agent](images/phase3-windows-wazuh.png)
+
+The Windows endpoint is successfully registered with and communicating with the Wazuh manager.
+
+---
+
+## Windows Application Log Validation
+
+A controlled Windows Application event was generated to verify local Windows event logging.
+
+A custom event source was registered using:
+
+```powershell
+New-EventLog -LogName Application -Source "WazuhTest"
+```
+
+A controlled test event was generated:
+
+```powershell
+Write-EventLog -LogName Application -Source "WazuhTest" -EventId 1001 -EntryType Warning -Message "SOC-LAB TEST: Windows Wazuh logging validation"
+```
+
+The event contained:
+
+| Field | Value |
+|---|---|
+| Log | Application |
+| Source | `WazuhTest` |
+| Event ID | `1001` |
+| Level | Warning |
+| Message | `SOC-LAB TEST: Windows Wazuh logging validation` |
+
+PowerShell verification confirmed that the event existed locally in the Windows Application log.
+
+This validated:
+
+- Windows Application logging
+- Controlled event generation
+- Wazuh Application log monitoring configuration
+- Wazuh Agent connectivity
+
+Whether a collected event becomes a Wazuh security alert depends on Wazuh rule matching and alert thresholds. Centralized detection and rule analysis are addressed in Phase 4.
+
+---
+
+## Ubuntu Linux Endpoint
 
 Ubuntu represents a Linux endpoint and controlled security target located within the isolated DMZ.
 
-### Configuration
+### Endpoint Configuration
 
 - [x] auditd
 - [x] osquery
 - [x] Wazuh Agent
 - [x] Linux audit logging
 - [x] System monitoring
+- [x] DMZ-to-Wazuh firewall exception
+- [x] Centralized Wazuh communication
 
-The Ubuntu endpoint is assigned:
+| Setting | Value |
+|---|---|
+| Hostname | `soc-ubuntu` |
+| IP Address | `10.50.20.100` |
+| Network | `10.50.20.0/24` |
+| Gateway | `10.50.20.1` |
+| Network Zone | DMZ |
 
-- Hostname: `soc-ubuntu`
-- IP Address: `10.50.20.100`
-- Network: DMZ `10.50.20.0/24`
+### Snapshot 5 — Ubuntu Endpoint
 
-### auditd
+![Ubuntu Endpoint](images/phase3-ubuntu.png)
+
+---
+
+## Linux Auditing with auditd
 
 Linux auditing was configured using `auditd`.
 
-A controlled test file was monitored using an audit rule with the key:
+A controlled test file was monitored using an audit rule associated with the key:
 
-`audit_test`
+```text
+audit_test
+```
 
-The `ausearch` utility successfully retrieved audit records associated with the monitored file.
+The `ausearch` utility successfully retrieved records associated with the monitored activity.
+
+Example:
+
+```bash
+sudo ausearch -k audit_test -i
+```
 
 Captured audit records included:
 
@@ -434,50 +597,350 @@ Captured audit records included:
 - PATH
 - PROCTITLE
 - CONFIG_CHANGE
-- User and process information
-- Successful file activity
-
-This confirms that Linux audit events are being recorded for security analysis.
-
-### osquery
-
-osquery was installed to provide additional endpoint visibility and system querying capabilities.
-
-The `osqueryd` daemon was enabled and verified as running.
-
-osquery provides visibility into operating system information, processes, users, networking, and other endpoint data that can support security investigations.
-
-### Wazuh Agent
-
-The Wazuh Agent was installed and configured on the Ubuntu endpoint.
-
-The agent successfully authenticated with the Wazuh manager and established a connection to:
-
-`10.10.10.102:1514/TCP`
-
-OPNsense firewall rules allow the Ubuntu DMZ endpoint to communicate with the Wazuh manager over the required Wazuh agent communication port while maintaining DMZ isolation from the remainder of the Security LAN.
-
-### Snapshot 5 — Ubuntu Endpoint
-
-![Ubuntu Endpoint](images/phase3-ubuntu.png)
-
-The Ubuntu system information confirms the Linux endpoint is running Ubuntu 26.04.1 LTS inside the VirtualBox environment.
+- User information
+- Process information
+- File activity
+- Successful system activity
 
 ### Snapshot 6 — Linux Security Monitoring
 
 ![Linux Security Monitoring](images/phase3-linux-monitoring.png)
 
-`auditd` validation confirms that Linux security events are being recorded and can be queried using `ausearch`.
+The auditd validation confirms that Linux security events are being recorded and can be queried during investigations.
 
-### Outcome
+---
+
+## osquery Endpoint Visibility
+
+osquery was installed to provide additional endpoint visibility and SQL-based operating-system querying.
+
+The initial installation attempt could not locate the package through the currently configured Ubuntu repositories.
+
+The official osquery repository was therefore added.
+
+During configuration, a malformed repository entry caused an additional package-management issue.
+
+The repository configuration was corrected, the package index was refreshed, and osquery was successfully installed.
+
+After installation, the `osqueryd` service initially appeared inactive/disabled.
+
+The service was enabled and started using:
+
+```bash
+sudo systemctl enable --now osqueryd
+```
+
+Service status was then verified as:
+
+```text
+active (running)
+```
+
+osquery provides visibility into information such as:
+
+- Operating system information
+- Running processes
+- Users
+- Network information
+- Installed software
+- Services
+- System configuration
+
+---
+
+## Ubuntu Wazuh Agent
+
+The Wazuh Agent was installed and configured on the Ubuntu endpoint.
+
+The endpoint communicates with the Wazuh manager at:
+
+```text
+10.10.10.102:1514/TCP
+```
+
+The agent successfully authenticated with the Wazuh manager, received a valid key, and established communication.
+
+Agent logs ultimately confirmed:
+
+```text
+Connected to the server ([10.10.10.102]:1514/tcp).
+```
+
+---
+
+## DMZ-to-Wazuh Firewall Communication
+
+SOC-Ubuntu resides inside the DMZ:
+
+```text
+10.50.20.100
+```
+
+The Wazuh manager resides inside the Security LAN:
+
+```text
+10.10.10.102
+```
+
+General DMZ-to-Security-LAN communication remains blocked.
+
+A narrow OPNsense firewall exception was therefore configured to permit only the required Wazuh communication:
+
+```text
+SOC-Ubuntu
+10.50.20.100
+      |
+      | TCP 1514
+      v
+   OPNsense
+      |
+      v
+SOC-Wazuh
+10.10.10.102
+```
+
+The narrow allow rule must be evaluated before the broader DMZ-to-Security-LAN blocking rule.
+
+---
+
+## DMZ-to-Wazuh Connectivity Validation
+
+ICMP ping was intentionally not used as the primary validation method because ICMP from the DMZ to the Security LAN remains blocked by the segmentation policy.
+
+Instead, the actual Wazuh service port was tested:
+
+```bash
+nc -vz 10.10.10.102 1514
+```
+
+The connection succeeded.
+
+This confirmed that the required Wazuh traffic could traverse the firewall without weakening the broader DMZ isolation policy.
+
+---
+
+## Ubuntu Security Event Validation
+
+A controlled Linux logging event was generated:
+
+```bash
+sudo logger "SOC-LAB TEST: Ubuntu Wazuh logging validation"
+```
+
+The event successfully appeared in the centralized Wazuh environment.
+
+This demonstrated the telemetry path:
+
+```text
+Ubuntu Endpoint
+      |
+      v
+Linux Logging
+      |
+      v
+Wazuh Agent
+      |
+      v
+OPNsense Firewall
+      |
+      | TCP 1514
+      v
+Wazuh Manager
+```
+
+---
+
+## Authentication Failure Validation
+
+A controlled failed authentication attempt was generated on the Ubuntu endpoint.
+
+Wazuh successfully processed the event.
+
+The observed detection included:
+
+| Field | Value |
+|---|---|
+| Endpoint | `soc-ubuntu` |
+| Endpoint IP | `10.50.20.100` |
+| Event Type | Authentication Failure |
+| Rule ID | `5503` |
+| Rule Level | `5` |
+| Description | `PAM: User login failed` |
+
+This provided additional validation that Ubuntu telemetry was successfully reaching the centralized monitoring infrastructure.
+
+Detailed Wazuh alert analysis and correlation are covered in Phase 4.
+
+---
+
+## Phase 3 Troubleshooting and Lessons Learned
+
+Several configuration and integration problems were encountered during endpoint deployment.
+
+Documenting these issues demonstrates the troubleshooting process used to build and validate the environment.
+
+### Windows Event IDs
+
+Windows Security Event ID `4688` and Sysmon Event ID `1` both record process creation activity but originate from different telemetry sources.
+
+| Event | Source | Purpose |
+|---|---|---|
+| `4688` | Windows Security | Process creation auditing |
+| `1` | Microsoft Sysmon | Enhanced process creation telemetry |
+| `4104` | PowerShell Operational | PowerShell script-block logging |
+
+An important lesson was to distinguish native Windows Security auditing from Sysmon telemetry.
+
+### osquery Installation
+
+Ubuntu initially could not locate the osquery package.
+
+The official osquery repository had to be added before installation.
+
+A malformed repository entry also had to be corrected before package installation could proceed.
+
+### osquery Service
+
+After installation, `osqueryd` initially appeared inactive/disabled.
+
+The issue was corrected using:
+
+```bash
+sudo systemctl enable --now osqueryd
+```
+
+### Wazuh Agent Connectivity
+
+The Ubuntu Wazuh Agent temporarily reported the server as unavailable during enrollment.
+
+The complete log sequence was reviewed rather than treating the initial warning as a final failure.
+
+Subsequent entries confirmed:
+
+- Authentication request
+- Valid key received
+- Successful connection
+- Communication with `10.10.10.102:1514/TCP`
+
+The message:
+
+```text
+No authentication password provided
+```
+
+was informational in this successful enrollment context because subsequent entries confirmed successful authentication and connection.
+
+### ICMP vs TCP Testing
+
+A failed ping from the DMZ does not necessarily indicate that Wazuh communication is unavailable.
+
+The correct service-level test was:
+
+```bash
+nc -vz 10.10.10.102 1514
+```
+
+This validated the actual Wazuh TCP service.
+
+### Firewall Rule Ordering
+
+OPNsense firewall rule ordering matters.
+
+The narrow Ubuntu-to-Wazuh TCP `1514` allow rule must be evaluated before the broader DMZ-to-Security-LAN deny rule.
+
+This maintains segmentation while permitting required security telemetry.
+
+---
+
+## Endpoint Troubleshooting Methodology
+
+Phase 3 reinforced the importance of validating each layer individually.
+
+```text
+Generate Event
+      |
+      v
+Verify Local Log
+      |
+      v
+Verify Security Agent
+      |
+      v
+Verify Network Connectivity
+      |
+      v
+Verify Firewall Policy
+      |
+      v
+Verify TCP Service Port
+      |
+      v
+Verify Manager Connection
+      |
+      v
+Verify Centralized Telemetry
+```
+
+This helps determine whether a problem exists at the:
+
+- Endpoint
+- Logging layer
+- Security agent
+- Network
+- Firewall
+- Wazuh manager
+- Centralized monitoring layer
+
+---
+
+## Phase 3 Outcome
 
 Endpoint security monitoring is operational across both Windows and Linux systems.
 
-The Windows endpoint generates process telemetry through Windows auditing and Microsoft Sysmon and is connected to the Wazuh manager.
+### Windows 11
 
-The Ubuntu endpoint generates Linux audit telemetry through auditd, provides endpoint visibility through osquery, and communicates with the Wazuh manager from the isolated DMZ.
+The Windows endpoint now provides:
 
-Both endpoints are now prepared to provide security telemetry to the centralized Wazuh SIEM/XDR environment used in Phase 4.
+- Windows Security auditing
+- Event ID `4688` process telemetry
+- Command-line process auditing
+- Sysmon Event ID `1` telemetry
+- PowerShell Event ID `4104` logging
+- Windows Application log monitoring
+- Wazuh Agent connectivity
+
+### Ubuntu Linux
+
+The Ubuntu endpoint now provides:
+
+- auditd security auditing
+- osquery endpoint visibility
+- Linux system logging
+- Wazuh Agent connectivity
+- Controlled DMZ-to-Wazuh communication
+- Authentication-failure telemetry
+
+The endpoint telemetry architecture is:
+
+```text
+Windows 11                         Ubuntu Linux
+    |                                  |
+    +-- Windows Security               +-- auditd
+    +-- Sysmon                         +-- osquery
+    +-- PowerShell Logs                +-- Linux Logs
+    |                                  |
+    +---------- Wazuh Agents ----------+
+                    |
+                    v
+              OPNsense Firewall
+                    |
+                    v
+               Wazuh Manager
+```
+
+**Phase 3 Status: COMPLETE**
+
+The endpoint telemetry infrastructure is now ready for centralized SIEM/XDR monitoring and alert analysis in Phase 4.
 
 ---
 
@@ -485,12 +948,13 @@ Both endpoints are now prepared to provide security telemetry to the centralized
 
 ## Centralized Security Monitoring
 
-Wazuh is deployed on the Security Server.
+Wazuh is deployed on the Security Server to provide centralized security monitoring, detection, and analysis.
 
 ### Data Sources
 
 - Windows Event Logs
 - Sysmon
+- PowerShell logs
 - Linux logs
 - auditd
 - osquery
@@ -506,6 +970,20 @@ Wazuh is deployed on the Security Server.
 - Network events
 - Security alerts
 - Log correlation
+- Detection rules
+- MITRE ATT&CK mapping
+
+### Planned Tasks
+
+- Validate connected Windows and Ubuntu agents
+- Review centralized security events
+- Analyze Wazuh detection rules
+- Generate controlled security events
+- Investigate authentication alerts
+- Analyze rule IDs and severity levels
+- Review MITRE ATT&CK mappings
+- Validate Windows telemetry in Wazuh
+- Document SOC analyst workflows
 
 ### Snapshot 1 — Wazuh Dashboard
 
@@ -521,7 +999,7 @@ Wazuh is deployed on the Security Server.
 
 ### Outcome
 
-Security events from multiple systems can be monitored and correlated from a centralized platform.
+Security events from multiple systems can be monitored, detected, analyzed, and correlated from a centralized platform.
 
 ---
 
@@ -580,7 +1058,7 @@ Network detections can be correlated with endpoint telemetry in Wazuh.
 
 ## Nmap
 
-Nmap is used from the Kali analyst workstation for authorized discovery of the lab environment.
+Nmap is used from the Kali analyst workstation for authorized discovery of the Security LAN.
 
 ### Tasks
 
@@ -590,10 +1068,16 @@ Nmap is used from the Kali analyst workstation for authorized discovery of the l
 - Version detection
 - Asset documentation
 
-Example:
+Example Security LAN scan:
 
 ```bash
-nmap -sV 10.50.10.0/24
+nmap -sV 10.10.10.0/24
+```
+
+The DMZ can be analyzed separately when required:
+
+```bash
+nmap -sV 10.50.20.0/24
 ```
 
 ### Snapshot 1 — Nmap Results
@@ -604,7 +1088,7 @@ nmap -sV 10.50.10.0/24
 
 ## Wireshark
 
-Wireshark provides packet-level analysis.
+Wireshark provides packet-level network analysis.
 
 ### Analysis
 
@@ -905,7 +1389,7 @@ Security investigations are documented and managed as structured incident-respon
 
 ## YARA
 
-YARA rules are created to identify suspicious test files.
+YARA rules are created to identify suspicious controlled test files.
 
 ### Snapshot 1 — YARA Rule
 
@@ -948,7 +1432,7 @@ Autopsy is used when disk or file-system forensic analysis is required.
 
 ### Snapshot 4 — Autopsy Investigation
 
-![Autopsy](images/phase11-autopsy.png)
+![Autopsy Investigation](images/phase11-autopsy.png)
 
 ### Outcome
 
@@ -1274,14 +1758,18 @@ enterprise-security-operations-lab/
 +-- README.md
 |
 +-- images/
-|   +-- front.png
-|   +-- network-architecture.png
-|   +-- phase1-vms.png
-|   +-- phase1-network.png
-|   +-- phase2-dashboard.png
+|   +-- diagram.png
+|   +-- arch2.png
+|   +-- phase1-vm-inventory.png
+|   +-- phase1-network-kali.png
+|   +-- windows11-opnsense-network-config.png
+|   +-- windows11-network-validation.png
+|   +-- phase1-opnsense-dashboard.png
 |   +-- phase2-interfaces.png
 |   +-- phase2-firewall-rules.png
+|   +-- phase2-segmentation-validation.png
 |   +-- phase3-windows.png
+|   +-- phase3-windows-process-auditing.png
 |   +-- phase3-sysmon.png
 |   +-- phase3-windows-wazuh.png
 |   +-- phase3-ubuntu.png
@@ -1370,12 +1858,35 @@ All scanning, testing, traffic generation, vulnerability assessment, and securit
 
 ---
 
-# Final Outcome
+# Current Project Status
+
+| Phase | Status |
+|---|---|
+| Phase 1 — VirtualBox Enterprise Environment | ✅ Complete |
+| Phase 2 — OPNsense Firewall and Segmentation | ✅ Complete |
+| Phase 3 — Endpoint Security Monitoring | ✅ Complete |
+| Phase 4 — Wazuh SIEM/XDR | 🔄 Next |
+| Phase 5 — Suricata IDS/IPS | ⏳ Planned |
+| Phase 6 — Network Security Analysis | ⏳ Planned |
+| Phase 7 — Vulnerability Management | ⏳ Planned |
+| Phase 8 — Security Operations SQL Database | ⏳ Planned |
+| Phase 9 — Threat Intelligence | ⏳ Planned |
+| Phase 10 — Incident Response | ⏳ Planned |
+| Phase 11 — Digital Forensics | ⏳ Planned |
+| Phase 12 — Web Application Security | ⏳ Planned |
+| Phase 13 — Python Security Automation | ⏳ Planned |
+| Phase 14 — Enterprise SOC Investigation | ⏳ Planned |
+
+---
+
+# Final Project Goal
 
 **Enterprise Security Operations Lab**
 
 **5 Primary Virtual Machines + Phase-Specific Security Tools**
 
 **VirtualBox + OPNsense + Suricata + Windows 11 + Sysmon + Ubuntu + auditd + osquery + Wazuh + Kali Linux + Nmap + Wireshark + Greenbone/OpenVAS + MISP + DFIR-IRIS + YARA + Volatility 3 + Autopsy + OWASP ZAP + PostgreSQL + SQL + Python**
+
+The completed environment will demonstrate the full security operations lifecycle:
 
 **Detect → Analyze → Investigate → Correlate → Respond → Remediate → Validate → Report**
