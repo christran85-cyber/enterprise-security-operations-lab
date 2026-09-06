@@ -3217,9 +3217,9 @@ All scanning, testing, traffic generation, vulnerability assessment, and securit
 | Phase 1 — VirtualBox Enterprise Environment | ✅ Complete |
 | Phase 2 — OPNsense Firewall and Segmentation | ✅ Complete |
 | Phase 3 — Endpoint Security Monitoring | ✅ Complete |
-| Phase 4 — Wazuh SIEM/XDR | 🔄 Next |
-| Phase 5 — Suricata IDS/IPS | ⏳ Planned |
-| Phase 6 — Network Security Analysis | ⏳ Planned |
+| Phase 4 — Wazuh SIEM/XDR | ✅ Complete |
+| Phase 5 — Suricata IDS/IPS | ✅ Complete |
+| Phase 6 — Network Security Analysis | 🔄 Next |
 | Phase 7 — Vulnerability Management | ⏳ Planned |
 | Phase 8 — Security Operations SQL Database | ⏳ Planned |
 | Phase 9 — Threat Intelligence | ⏳ Planned |
