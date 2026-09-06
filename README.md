@@ -1582,50 +1582,824 @@ The centralized SIEM/XDR environment is now ready to integrate network IDS/IPS t
 
 ## Network Threat Detection
 
-Suricata runs with OPNsense to monitor network traffic.
+Phase 5 focused on deploying, configuring, troubleshooting, and validating Suricata network intrusion detection on the OPNsense firewall.
 
-### Detection Capabilities
+The objective was to monitor traffic entering the DMZ, generate controlled security activity from the Kali analyst workstation, and verify that Suricata could inspect network traffic and generate alerts for reconnaissance and HTTP communication.
 
-- Port scans
-- Reconnaissance
-- Suspicious connections
-- Protocol anomalies
+The systems used during Phase 5 were:
+
+| System | IP Address | Network | Role |
+|---|---|---|---|
+| SOC-Kali | `10.10.10.103` | Security LAN | Analyst / controlled traffic source |
+| SOC-Ubuntu | `10.50.20.100` | DMZ | Linux endpoint / controlled target |
+| SOC-OPNsense | `10.10.10.1` / `10.50.20.1` | LAN / DMZ | Firewall + Suricata IDS |
+
+---
+
+## Suricata Configuration
+
+Suricata was enabled through the OPNsense Intrusion Detection service.
+
+The DMZ interface was monitored so that traffic directed toward the Ubuntu target could be inspected.
+
+Suricata provided visibility into:
+
+- Network reconnaissance
+- Port scanning
+- Suspicious network connections
+- HTTP communication
 - IDS signatures
-- Known malicious traffic patterns
+- Custom detection rules
+- Source and destination addresses
+- Source and destination ports
+- Network protocols
 
-## Detection Flow
+The monitoring path was:
+
+```text
+SOC-Kali
+10.10.10.103
+     |
+     v
+OPNsense Firewall
+     |
+     v
+Suricata IDS
+     |
+     v
+DMZ
+     |
+     v
+SOC-Ubuntu
+10.50.20.100
+```
+
+---
+
+## Suricata Service Validation
+
+Before generating controlled security traffic, the Suricata configuration and service status were validated.
+
+The Suricata configuration was tested using:
+
+```bash
+suricata -T -c /usr/local/etc/suricata/suricata.yaml
+```
+
+The command returned an exit status of:
+
+```text
+0
+```
+
+This confirmed that the Suricata configuration successfully passed validation.
+
+The Suricata build information was also reviewed.
+
+Netmap support was confirmed:
+
+```text
+Netmap support: yes v14+
+```
+
+This verified that the installed Suricata build supports Netmap functionality used for IPS operation.
+
+---
+
+## Suricata Service Troubleshooting
+
+During configuration changes, the OPNsense interface returned:
+
+```text
+Error reconfiguring IDS
+Error (1)
+```
+
+Suricata logs were reviewed to determine whether the engine was experiencing a configuration or runtime failure.
+
+The active Suricata logs were identified under:
+
+```text
+/var/log/suricata/
+```
+
+Important log files included:
+
+```text
+eve.json
+stats.log
+latest.log
+suricata_YYYYMMDD.log
+```
+
+The Suricata engine log showed that the engine was capable of starting:
+
+```text
+This is Suricata version 8.0.6 RELEASE running in SYSTEM mode
+Threads created
+Engine started.
+```
+
+The log later showed:
+
+```text
+Signal Received. Stopping engine.
+```
+
+A configuration validation test was therefore performed using:
+
+```bash
+suricata -T -c /usr/local/etc/suricata/suricata.yaml
+```
+
+The command completed successfully with exit status:
+
+```text
+0
+```
+
+This demonstrated an important distinction:
+
+**A valid Suricata configuration does not necessarily mean that the Suricata service is currently running.**
+
+---
+
+## Suricata Process Validation
+
+The running Suricata process was checked using:
+
+```bash
+pgrep -af suricata
+```
+
+During troubleshooting, this initially returned no active Suricata process.
+
+The service status was also checked using:
+
+```bash
+service suricata status
+```
+
+and through the OPNsense configuration framework:
+
+```bash
+configctl ids status
+```
+
+These checks confirmed that Suricata was not running at that point.
+
+The IDS service was then started using:
+
+```bash
+configctl ids start
+```
+
+OPNsense returned:
+
+```text
+OK
+```
+
+The Suricata process was checked again:
+
+```bash
+pgrep -af suricata
+```
+
+A running process was now present.
+
+The service was independently validated using:
+
+```bash
+service suricata status
+```
+
+which confirmed that Suricata was running.
+
+This demonstrated that service validation should include both configuration testing and runtime process verification.
+
+---
+
+## Packet Processing Validation
+
+After confirming that the Suricata service was running, packet statistics were reviewed.
+
+The Suricata statistics log was located at:
+
+```text
+/var/log/suricata/stats.log
+```
+
+Packet-processing counters including:
+
+```text
+capture.kernel_packets
+decoder.pkts
+```
+
+contained non-zero values.
+
+This confirmed that Suricata was not simply running as a process.
+
+The engine was actively receiving and decoding network traffic.
+
+The validation process therefore became:
+
+```text
+Suricata Configuration
+        |
+        v
+Configuration Test
+        |
+        v
+Service Status
+        |
+        v
+Running Process
+        |
+        v
+Packet Processing
+        |
+        v
+Controlled Traffic
+        |
+        v
+Detection
+        |
+        v
+Alert
+```
+
+---
+
+## Controlled Reconnaissance Testing
+
+The Kali Linux analyst workstation was used to generate authorized reconnaissance traffic against the Ubuntu endpoint inside the isolated lab.
+
+Before scanning, connectivity to the target was validated.
+
+Ubuntu was reachable at:
+
+```text
+10.50.20.100
+```
+
+A controlled TCP SYN scan was then performed from Kali:
+
+```bash
+sudo nmap -sS -p 1-10000 10.50.20.100
+```
+
+The scan tested TCP ports `1-10000`.
+
+The target exposed services including:
+
+```text
+22/tcp — SSH
+80/tcp — HTTP
+```
+
+The remaining tested ports were closed.
+
+This generated realistic reconnaissance traffic for Suricata to inspect.
+
+---
+
+## Custom Reconnaissance Detection
+
+A custom Suricata detection was configured:
+
+```text
+Internal Recon - Kali to Ubuntu
+```
+
+The rule was designed to identify controlled network traffic originating from the Kali analyst workstation and targeting the Ubuntu DMZ system.
+
+Suricata successfully detected the reconnaissance activity.
+
+Alert information included:
+
+- Source: `10.10.10.103`
+- Destination: `10.50.20.100`
+- Interface: `DMZ`
+- Detection: `Internal Recon - Kali to Ubuntu`
+- Action: `allowed`
+
+Multiple alerts were generated as Nmap probed different destination ports.
+
+This validated the network detection path:
+
+```text
+SOC-Kali
+   |
+   | Nmap SYN Scan
+   v
+OPNsense
+   |
+   v
+Suricata Inspection
+   |
+   v
+Custom Detection Rule
+   |
+   v
+IDS Alert
+   |
+   v
+SOC Analyst Review
+```
+
+### Snapshot 1 — Nmap Reconnaissance Detection
+
+![Suricata Nmap Detection](images/phase5-suricata-nmap-detection.png)
+
+### Snapshot 2 — Suricata Nmap Alert Dashboard
+
+![Suricata Nmap Alert Dashboard](images/phase5-suricata-nmap-alert.png)
+
+---
+
+## Suricata EVE Alert Validation
+
+Suricata's structured EVE event log was reviewed directly:
+
+```text
+/var/log/suricata/eve.json
+```
+
+The event records showed Suricata alerts containing information such as:
+
+- Event type
+- Source IP
+- Destination IP
+- Source port
+- Destination port
+- Network protocol
+- Interface
+- Detection signature
+- Alert severity
+- Alert action
+
+The reconnaissance events identified:
+
+```text
+event_type: alert
+src_ip: 10.10.10.103
+dest_ip: 10.50.20.100
+signature: Internal Recon - Kali to Ubuntu
+```
+
+This provided command-line evidence that Suricata was generating structured security events.
+
+---
+
+## OPNsense Alert Dashboard Validation
+
+The same reconnaissance activity was reviewed through the OPNsense Intrusion Detection Alerts dashboard.
+
+The dashboard displayed multiple alerts associated with the controlled Nmap scan.
+
+The evidence showed:
+
+- Source: `10.10.10.103`
+- Destination: `10.50.20.100`
+- Interface: `DMZ`
+- Alert: `Internal Recon - Kali to Ubuntu`
+- Action: `allowed`
+
+This provided graphical validation of the same security activity recorded in the EVE event log.
+
+The combination of raw event data and graphical alert review demonstrated two different methods for validating Suricata detections.
+
+---
+
+## Controlled HTTP Traffic Testing
+
+Phase 5 also tested Suricata visibility into HTTP communication.
+
+A temporary Python HTTP server was started on the Ubuntu DMZ endpoint:
+
+```bash
+sudo python3 -m http.server 80
+```
+
+The server listened on:
+
+```text
+0.0.0.0:80
+```
+
+This provided a controlled HTTP service at:
+
+```text
+http://10.50.20.100
+```
+
+The Kali analyst workstation then generated an HTTP request using:
+
+```bash
+curl http://10.50.20.100
+```
+
+Ubuntu returned an HTML directory listing.
+
+This confirmed successful HTTP communication:
+
+```text
+SOC-Kali
+10.10.10.103
+      |
+      | HTTP GET
+      v
+OPNsense / Suricata
+      |
+      | TCP 80
+      v
+SOC-Ubuntu
+10.50.20.100
+```
+
+---
+
+## Initial HTTP Detection
+
+The HTTP request was first detected by the existing broad custom rule:
+
+```text
+Internal Recon - Kali to Ubuntu
+```
+
+The alert identified:
+
+- Source: `10.10.10.103`
+- Destination: `10.50.20.100`
+- Destination Port: `80`
+- Interface: `DMZ`
+- Action: `allowed`
+
+This confirmed that Suricata could see the HTTP connection.
+
+However, it also demonstrated that a broad source-to-destination rule can detect both reconnaissance and normal application traffic.
+
+A more descriptive custom detection was therefore created for the HTTP test.
+
+---
+
+## Custom HTTP Detection
+
+A second custom Suricata detection was configured:
+
+```text
+Kali to Ubuntu Http Detection
+```
+
+Controlled HTTP traffic was generated again from Kali:
+
+```bash
+curl http://10.50.20.100
+```
+
+Suricata successfully generated the new detection.
+
+The alert showed:
+
+- Source: `10.10.10.103`
+- Destination: `10.50.20.100`
+- Destination Port: `80`
+- Interface: `DMZ`
+- Detection: `Kali to Ubuntu Http Detection`
+- Action: `allowed`
+
+The broader reconnaissance rule also detected the connection.
+
+This demonstrated how multiple detection rules can match the same network activity depending on their scope.
+
+### Snapshot 3 — HTTP Detection
+
+![Suricata HTTP Detection](images/phase5-suricata-http-detection.png)
+
+---
+
+## Detection Engineering Observation
+
+The custom reconnaissance rule was intentionally broad enough to identify Kali-to-Ubuntu traffic.
+
+During HTTP testing, the same rule also generated an alert for legitimate TCP port `80` communication.
+
+This demonstrated an important detection-engineering principle:
+
+**A detection can technically match traffic while still being too broad to accurately describe the behavior.**
+
+Broad rules may produce unnecessary alerts or classify normal activity as suspicious.
+
+Detection rules should therefore be designed with sufficient context to distinguish between:
+
+- Normal network communication
+- Reconnaissance
+- Administrative activity
+- Application traffic
+- Potentially malicious behavior
+
+The Phase 5 testing demonstrated why detection logic should be validated against both suspicious and expected traffic.
+
+---
+
+## IDS vs IPS Analysis
+
+Suricata supports both Intrusion Detection System and Intrusion Prevention System functionality.
+
+IDS behavior follows:
 
 ```text
 Network Traffic
       |
       v
-   OPNsense
+Suricata Inspection
       |
       v
-   Suricata
+Signature Match
       |
       v
-     Wazuh
+Alert
       |
       v
-   SOC Alert
+Traffic Continues
 ```
 
-### Snapshot 1 — Suricata
+IPS operation adds the ability to drop traffic that matches configured prevention rules:
 
-![Suricata](images/phase5-suricata.png)
+```text
+Network Traffic
+      |
+      v
+Suricata Inspection
+      |
+      v
+Signature Match
+      |
+      v
+Drop / Block
+```
 
-### Snapshot 2 — IDS Alert
+Netmap IPS capability was investigated during Phase 5.
 
-![Suricata Alert](images/phase5-alert.png)
+The installed Suricata build reported:
 
-### Snapshot 3 — Alert in Wazuh
+```text
+Netmap support: yes v14+
+```
 
-![Wazuh IDS Alert](images/phase5-wazuh.png)
+However, the completed Phase 5 validation focused on reliable **IDS detection and alert generation**.
 
-### Outcome
+The validated alerts therefore showed:
 
-Network detections can be correlated with endpoint telemetry in Wazuh.
+```text
+Action: allowed
+```
+
+This confirms that the traffic was detected and logged rather than blocked.
+
+Future IPS testing can build on this validated IDS baseline.
+
+---
+
+## Phase 5 Troubleshooting and Lessons Learned
+
+Several important troubleshooting lessons were documented during the Suricata deployment and testing.
+
+### Configuration Validation Does Not Equal Service Operation
+
+The command:
+
+```bash
+suricata -T -c /usr/local/etc/suricata/suricata.yaml
+```
+
+returned exit status:
+
+```text
+0
+```
+
+This proved that the configuration was valid.
+
+However, Suricata was not running at that point.
+
+Therefore:
+
+```text
+Valid Configuration ≠ Running Security Service
+```
+
+Both conditions must be validated independently.
+
+---
+
+### Service Validation Requires Multiple Checks
+
+Suricata was validated using several methods:
+
+```bash
+pgrep -af suricata
+```
+
+```bash
+service suricata status
+```
+
+```bash
+configctl ids status
+```
+
+Each command provided a different view of the IDS state.
+
+After starting Suricata using:
+
+```bash
+configctl ids start
+```
+
+the process and service checks confirmed successful operation.
+
+---
+
+### Packet Counters Confirm Actual Inspection
+
+A running process alone does not prove that Suricata is receiving traffic.
+
+Reviewing:
+
+```text
+/var/log/suricata/stats.log
+```
+
+and confirming non-zero packet counters demonstrated that network traffic was actually reaching the inspection engine.
+
+This provided stronger validation than service status alone.
+
+---
+
+### Logs Should Be Located Before Troubleshooting
+
+The Suricata logs on OPNsense were identified under:
+
+```text
+/var/log/suricata/
+```
+
+Important files included:
+
+```text
+eve.json
+stats.log
+latest.log
+suricata_YYYYMMDD.log
+```
+
+Identifying the correct log location prevented troubleshooting from relying only on generic GUI error messages.
+
+---
+
+### Warnings Are Not Necessarily Fatal Errors
+
+Suricata generated flowbit-related warnings during startup.
+
+The engine nevertheless reported:
+
+```text
+Engine started.
+```
+
+This demonstrated that warnings must be interpreted in context.
+
+A warning does not automatically mean that the security service failed.
+
+---
+
+### HTTP Service Validation
+
+During HTTP testing, the temporary Python HTTP server was accidentally stopped before a Kali request was generated.
+
+The resulting curl request failed because TCP port `80` was no longer listening.
+
+The server was restarted using:
+
+```bash
+sudo python3 -m http.server 80
+```
+
+and the test succeeded.
+
+This reinforced the troubleshooting workflow:
+
+```text
+Connection Failure
+       |
+       v
+Check Target Service
+       |
+       v
+Check Listening Port
+       |
+       v
+Check Network Connectivity
+       |
+       v
+Check Firewall
+       |
+       v
+Check IDS
+```
+
+A failed network-security test does not automatically mean that the firewall or IDS is malfunctioning.
+
+---
+
+### Detection Rules Must Be Tested Against Normal Traffic
+
+The broad reconnaissance rule also matched normal HTTP traffic between the same source and destination.
+
+This demonstrated that detection rules should be tested against:
+
+1. Traffic that should trigger the rule.
+2. Traffic that should not trigger the rule.
+3. Different protocols and ports.
+4. Normal application behavior.
+5. Controlled suspicious behavior.
+
+This helps identify overly broad rules and potential false positives.
+
+---
+
+## Phase 5 Outcome
+
+Phase 5 successfully demonstrated network intrusion detection using Suricata integrated with OPNsense.
+
+The completed work included:
+
+- Suricata configuration on OPNsense
+- DMZ network monitoring
+- Suricata configuration validation
+- Netmap capability verification
+- Suricata service troubleshooting
+- Process validation
+- Packet-processing validation
+- Controlled Kali-to-Ubuntu reconnaissance
+- Nmap SYN scanning
+- Custom reconnaissance detection
+- Raw EVE event analysis
+- OPNsense alert-dashboard validation
+- Controlled HTTP traffic generation
+- Custom HTTP detection
+- Detection-rule behavior analysis
+- IDS versus IPS analysis
+- Network security troubleshooting
+
+The final validated workflow was:
+
+```text
+SOC-Kali
+10.10.10.103
+      |
+      | Controlled Security Traffic
+      |
+      +---- Nmap Reconnaissance
+      |
+      +---- HTTP Traffic
+      |
+      v
+OPNsense Firewall
+      |
+      v
+Suricata IDS
+      |
+      +---- Internal Recon Detection
+      |
+      +---- HTTP Detection
+      |
+      v
+Security Alert
+      |
+      v
+OPNsense Alerts Dashboard
+      |
+      v
+SOC Analyst Validation
+```
+
+## Phase 5 Evidence
+
+```text
+Snapshot 1 — Nmap Reconnaissance Detection
+Snapshot 2 — Suricata Nmap Alert Dashboard
+Snapshot 3 — HTTP Detection
+```
+
+**Phase 5 Status: COMPLETE**
+
+The Suricata IDS environment is operational and successfully detects controlled reconnaissance and HTTP traffic between the Security LAN and DMZ.
+
+The environment is now ready for deeper network discovery and packet-level traffic analysis during Phase 6.
 
 ---
 
