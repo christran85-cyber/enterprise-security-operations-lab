@@ -2403,950 +2403,507 @@ The environment is now ready for deeper network discovery and packet-level traff
 
 ---
 
-# Phase 6 — Network Security Analysis
+## Phase 6 — Incident Generation, Detection, and Correlation
 
-**Status:** ✅ Complete
+### Objective
 
-## Overview
+Phase 6 validates the end-to-end SOC detection and investigation workflow by generating controlled security activity from the Kali analyst system and correlating network-based Suricata alerts with endpoint-based Wazuh alerts.
 
-Phase 6 focused on controlled network reconnaissance, web enumeration, authentication testing, and security-event analysis against the Ubuntu DMZ server.
+The primary systems involved were:
 
-The objective was to move beyond validating individual security tools and begin investigating activity across multiple layers of the SOC environment.
+| System | Role | IP Address |
+|---|---|---|
+| SOC-Kali | Analyst / Controlled Attack Source | `10.10.10.103` |
+| SOC-OPNsense | Firewall / Suricata IDS | `10.10.10.1` |
+| SOC-Ubuntu | DMZ Target / Wazuh Agent | `10.50.20.100` |
+| SOC-Wazuh | SIEM / XDR Manager | `10.10.10.102` |
 
-Testing originated from the Kali Linux analyst system and targeted the Ubuntu DMZ server. Suricata on OPNsense provided network-level detection, while Wazuh provided endpoint and authentication telemetry.
-
-The investigation followed this general workflow:
+The investigation workflow was:
 
 ```text
 SOC-Kali
 10.10.10.103
      |
-     | Reconnaissance / Enumeration / SSH Attempts
+     | Reconnaissance / HTTP / SSH
      v
 OPNsense + Suricata
+Network Detection
      |
-     | Network IDS Detection
      v
 SOC-Ubuntu
 10.50.20.100
      |
-     | Endpoint Security Events
+     | Endpoint telemetry
      v
-Wazuh SIEM
+Wazuh Agent
      |
      v
-SOC Investigation
+SOC-Wazuh
+Detection + Investigation + MITRE Mapping
 ```
+
+The goal was not simply to generate traffic, but to prove that the lab could **generate, detect, investigate, correlate, and document** suspicious activity across multiple security layers.
 
 ---
 
-## Environment
+### 6.1 Nmap Reconnaissance
 
-| Component | Purpose | IP Address |
-|---|---|---|
-| SOC-Kali | Analyst / controlled attack simulation | 10.10.10.103 |
-| SOC-Ubuntu | DMZ target | 10.50.20.100 |
-| SOC-OPNsense | Firewall / Suricata IDS | 10.10.10.1 |
-| SOC-Wazuh | SIEM / XDR | 10.10.10.102 |
+Controlled reconnaissance was generated from SOC-Kali (`10.10.10.103`) against the SOC-Ubuntu DMZ target (`10.50.20.100`).
 
----
+Connectivity to the target was first verified before Nmap was used to enumerate exposed services.
 
-# 1. Baseline Validation
-
-Before generating security events, connectivity between Kali and the Ubuntu DMZ server was verified.
-
-Kali networking was checked with:
-
-```bash
-ip addr
-```
-
-Kali was confirmed as:
-
-```text
-10.10.10.103/24
-```
-
-Connectivity to Ubuntu was tested with:
-
-```bash
-ping -c 4 10.50.20.100
-```
-
-The Ubuntu system responded successfully.
-
-Suricata was also independently verified from the OPNsense shell:
-
-```sh
-pgrep -af suricata
-```
-
-and:
-
-```sh
-service suricata status
-```
-
-This confirmed that the Suricata process and service were operational before attack traffic was generated.
-
----
-
-# 2. Nmap Network Reconnaissance
-
-Controlled reconnaissance was generated from Kali against the Ubuntu DMZ server.
+Example reconnaissance command:
 
 ```bash
 sudo nmap -sS -sV 10.50.20.100
 ```
 
-The scan was used to identify reachable TCP services and perform service/version detection.
+The scan confirmed that the Ubuntu target was reachable and identified SSH (`TCP/22`) as an exposed service.
 
-The activity originated from:
+![Phase 6 - Nmap Reconnaissance](screenshots/phase6-nmap-reconnaissance(4).png)
 
-```text
-Source:
-10.10.10.103 — SOC-Kali
-
-Destination:
-10.50.20.100 — SOC-Ubuntu
-```
-
-![Nmap Reconnaissance](screenshots/phase6-nmap-reconnaissance.png)
+This established the reconnaissance stage of the controlled incident and generated network traffic that could be inspected by Suricata.
 
 ---
 
-# 3. Suricata Reconnaissance Detection
+### 6.2 Suricata Reconnaissance Detection
 
-After the Nmap scan, Suricata alerts were reviewed through the OPNsense Intrusion Detection interface.
+Because traffic between the Security LAN and DMZ traverses OPNsense, Suricata was positioned to inspect traffic generated from Kali toward Ubuntu.
 
-Suricata detected traffic originating from Kali and targeting Ubuntu across the DMZ.
+Suricata recorded activity with:
 
-Observed custom detections included:
+- **Source:** `10.10.10.103`
+- **Destination:** `10.50.20.100`
+- **Interface:** DMZ
+- **Action:** Alert / Allowed
 
-```text
-Internal Recon - Kali to Ubuntu
-Kali to Ubuntu Http Detection
-```
+Custom Suricata detections generated alerts including:
 
-Relevant indicators included:
+- `Internal Recon - Kali to Ubuntu`
+- `Kali to Ubuntu Http Detection`
 
-```text
-Source IP:       10.10.10.103
-Destination IP:  10.50.20.100
-Interface:       DMZ
-Action:          allowed
-```
+![Phase 6 - Suricata Reconnaissance Detection](screenshots/phase6-suricata-recon-detection(4).png)
 
-![Suricata Recon Detection](screenshots/phase6-suricata-recon-detection.png)
-
-This established the first network-side detection of the Phase 6 activity.
+This confirmed that the IDS was actively inspecting traffic crossing the segmented lab environment.
 
 ---
 
-# 4. Controlled SSH Authentication Testing
+### 6.3 Controlled SSH Authentication Failure
 
-SSH availability on Ubuntu was verified with:
+After reconnaissance identified SSH on SOC-Ubuntu, a controlled failed authentication attempt was generated from Kali.
 
-```bash
-nmap -p 22 10.50.20.100
-```
-
-The result confirmed:
-
-```text
-22/tcp open ssh
-```
-
-A deliberately invalid account was then used to generate controlled authentication failures:
+The following SSH attempt was used:
 
 ```bash
 ssh phase6test@10.50.20.100
 ```
 
-Incorrect credentials were intentionally supplied.
+The intentionally invalid username `phase6test` was used to generate authentication-failure telemetry.
 
-The authentication attempt was rejected with:
+The connection reached the Ubuntu SSH service, authentication failed, and the server closed the connection after the unsuccessful password attempts.
 
-```text
-Permission denied
-```
+![Phase 6 - SSH Failed Login](screenshots/phase6-ssh-failed-login(4).png)
 
-![Failed SSH Login](screenshots/phase6-ssh-failed-login.png)
-
-This generated endpoint authentication telemetry for investigation through Ubuntu and Wazuh.
+This provided endpoint authentication activity that could later be compared with Suricata's network telemetry.
 
 ---
 
-# 5. Ubuntu Authentication Investigation
+### 6.4 Wazuh SSH Detection
 
-Ubuntu was examined to verify that the SSH activity reached the endpoint.
+The Wazuh agent installed on SOC-Ubuntu collected the authentication events generated by the failed SSH attempt and forwarded them to the Wazuh manager.
 
-Initial investigation attempted to use:
+Threat Hunting showed three related events, including:
 
-```text
-/var/log/auth.log
-```
+- **Rule 5710** — `sshd: Attempt to login using a non-existent user`
+- **Rule 5503** — `PAM: User login failed.`
+- **Rule Level:** `5`
+- **Agent:** `soc-ubuntu`
 
-but that file was not available in this environment.
+![Phase 6 - Wazuh SSH Detection](screenshots/phase6-wazuh-ssh-detection(4).png)
 
-Authentication telemetry was instead located through systemd journald.
-
-SSH events were examined using:
-
-```bash
-sudo journalctl -u ssh -n 50 --no-pager
-```
-
-Additional filtering was performed using:
-
-```bash
-sudo journalctl -t sshd -n 100 --no-pager | \
-grep -E "phase6test|10\.10\.10\.103|Failed password|Invalid user"
-```
-
-The journal confirmed SSH activity associated with:
-
-```text
-Source:
-10.10.10.103
-
-Username:
-phase6test
-```
-
-This established that the controlled authentication attempt reached Ubuntu and generated endpoint telemetry.
+This confirmed that authentication telemetry generated on the Ubuntu endpoint successfully reached the centralized Wazuh SIEM.
 
 ---
 
-# 6. Wazuh SSH Detection
+### 6.5 Wazuh SSH Event Investigation
 
-Wazuh Threat Hunting was used to investigate the Ubuntu authentication activity.
+The SSH detection was expanded in Wazuh to examine the underlying event fields.
 
-Filtering for the Kali source address revealed authentication-related detections.
+The event details showed:
 
-Observed rules included:
+- **Agent ID:** `002`
+- **Agent Name:** `soc-ubuntu`
+- **Agent IP:** `10.50.20.100`
+- **Source IP:** `10.10.10.103`
+- **Source User:** `phase6test`
+- **Decoder:** `sshd`
+- **Rule ID:** `5710`
+- **Rule Level:** `5`
+- **Rule Description:** `sshd: Attempt to login using a non-existent user`
 
-```text
-Rule 5710 — Level 5
-sshd: Attempt to login using a non-existent user
-```
-
-and:
-
-```text
-Rule 5503 — Level 5
-PAM: User login failed.
-```
-
-The detections originated from the Ubuntu Wazuh agent.
-
-![Wazuh SSH Detection](screenshots/phase6-wazuh-ssh-detection.png)
-
-This demonstrated that Wazuh successfully converted Ubuntu authentication telemetry into security alerts.
-
----
-
-# 7. Detailed Wazuh Event Investigation
-
-The SSH event was expanded in Wazuh to examine its underlying fields.
-
-The event identified:
-
-```text
-Agent:
-soc-ubuntu
-
-Target IP:
-10.50.20.100
-
-Source IP:
-10.10.10.103
-
-Username:
-phase6test
-
-Decoder:
-sshd
-
-Log source:
-journald
-```
-
-The underlying authentication message included:
+The raw event also recorded:
 
 ```text
 Failed password for invalid user phase6test from 10.10.10.103
 ```
 
-![Wazuh SSH Event Details](screenshots/phase6-wazuh-ssh-event-details.png)
+![Phase 6 - Wazuh SSH Event Details](screenshots/phase6-wazuh-ssh-event-details(4).png)
 
-The detailed event allowed the analyst to identify the source system, target endpoint, attempted username, log source, and authentication result.
-
----
-
-# 8. MITRE ATT&CK Mapping
-
-Wazuh automatically associated the SSH authentication event with MITRE ATT&CK techniques.
-
-Observed mappings included:
-
-```text
-T1110.001 — Password Guessing
-T1021.004 — SSH
-```
-
-Associated tactics included:
-
-```text
-Credential Access
-Lateral Movement
-```
-
-![Wazuh MITRE Mapping](screenshots/phase6-wazuh-mitre-mapping.png)
-
-This demonstrated how endpoint detections can be mapped to standardized adversary behaviors during an investigation.
+The source IP recorded by Wazuh directly matches the SOC-Kali system used to generate the controlled activity.
 
 ---
 
-# 9. Suricata and Wazuh SSH Correlation
+### 6.6 MITRE ATT&CK Mapping
 
-Suricata was reviewed after the controlled SSH activity.
+Wazuh enriched the SSH authentication event with MITRE ATT&CK information.
 
-Network telemetry showed communication from:
+The event was associated with:
+
+- **T1110.001 — Password Guessing**
+- **T1021.004 — SSH**
+
+The corresponding tactics displayed by Wazuh included:
+
+- **Credential Access**
+- **Lateral Movement**
+
+![Phase 6 - Wazuh MITRE ATT&CK Mapping](screenshots/phase6-wazuh-mitre-mapping(4).png)
+
+This enrichment demonstrates how SIEM telemetry can convert a raw authentication event into security context that helps an analyst understand the behavior represented by the alert.
+
+---
+
+### 6.7 Suricata and Wazuh SSH Correlation
+
+Suricata network telemetry was compared with the endpoint telemetry recorded by Wazuh.
+
+Suricata observed traffic originating from:
 
 ```text
 10.10.10.103
 ```
 
-to:
+and targeting:
 
 ```text
-10.50.20.100:22
-```
-
-on the DMZ interface.
-
-![Suricata SSH Correlation](screenshots/phase6-suricata-ssh-correlation.png)
-
-This provided two perspectives on the same activity:
-
-```text
-Suricata
-Network connection to TCP/22
-        |
-        v
-Ubuntu
-SSH authentication attempt
-        |
-        v
-Wazuh
-Authentication failure detection
-```
-
-Suricata provided network visibility while Wazuh provided endpoint authentication visibility.
-
----
-
-# 10. HTTP Service Validation and Reconnaissance
-
-Apache was installed on the Ubuntu DMZ server to provide a controlled HTTP service for additional testing.
-
-```bash
-sudo apt install apache2 -y
-```
-
-The listening service was verified using:
-
-```bash
-sudo ss -tulpn | grep ':80'
-```
-
-Kali then verified HTTP connectivity:
-
-```bash
-curl -I http://10.50.20.100
-```
-
-The server returned:
-
-```text
-HTTP/1.1 200 OK
-Server: Apache/2.4.66 (Ubuntu)
-```
-
-Nmap service/version detection was then performed against TCP port 80:
-
-```bash
-sudo nmap -sV -p 80 10.50.20.100
-```
-
-The scan identified:
-
-```text
-80/tcp open http Apache httpd 2.4.66 (Ubuntu)
-```
-
----
-
-# 11. Emerging Threats Nmap Detection
-
-Suricata detected the HTTP reconnaissance using an Emerging Threats rule.
-
-The observed alert was:
-
-```text
-ET SCAN Possible Nmap User-Agent Observed
-```
-
-Relevant information included:
-
-```text
-SID:              2024364
-Source IP:        10.10.10.103
-Destination IP:   10.50.20.100
-Destination Port: 80
-Interface:        DMZ
-Protocol:         TCP
-```
-
-![Suricata Nmap Web Recon](screenshots/phase6-suricata-nmap-web-recon.png)
-
-This detection was significant because an Emerging Threats rule independently identified Nmap behavior rather than relying only on the custom lab rules.
-
----
-
-# 12. Detailed Nmap Alert Investigation
-
-The Emerging Threats alert was opened for deeper analysis.
-
-Suricata exposed application-layer information associated with the HTTP request.
-
-Observed information included:
-
-```text
-Alert:
-ET SCAN Possible Nmap User-Agent Observed
-
-SID:
-2024364
-
-Source:
-10.10.10.103
-
-Destination:
 10.50.20.100
-
-Destination Port:
-80
-
-HTTP URL:
-/HNAP1
 ```
 
-Suricata also exposed an HTTP User-Agent identifying the Nmap Scripting Engine:
+including traffic involving destination port `22`.
 
-```text
-Mozilla/5.0 (compatible; Nmap Scripting Engine; ...)
-```
+![Phase 6 - Suricata SSH Correlation](screenshots/phase6-suricata-ssh-correlation(4).png)
 
-![Suricata Nmap Details](screenshots/phase6-incident1-suricata-nmap-details.png)
+Wazuh independently recorded the failed SSH authentication from the same Kali source IP on SOC-Ubuntu.
 
-This demonstrated that Suricata was performing application-layer inspection rather than merely identifying traffic to TCP port 80.
-
----
-
-# 13. Wazuh SSH Event Correlation
-
-Wazuh events were filtered using the Kali source address:
+The evidence can therefore be correlated as:
 
 ```text
 10.10.10.103
+SOC-Kali
+     |
+     | TCP/22
+     v
+Suricata
+Network Visibility
+     |
+     v
+10.50.20.100
+SOC-Ubuntu
+     |
+     | Failed password
+     | Invalid user: phase6test
+     v
+Wazuh Agent
+     |
+     v
+Wazuh SIEM
+Rule 5710 / Level 5
 ```
 
-Three related authentication events were identified.
-
-Observed activity included:
-
-```text
-Rule 5710
-sshd: Attempt to login using a non-existent user
-
-Rule 5503
-PAM: User login failed.
-
-Rule 5710
-sshd: Attempt to login using a non-existent user
-```
-
-All three events were associated with the Ubuntu endpoint and were rated Level 5.
-
-![Wazuh SSH Correlation](screenshots/phase6-incident1-wazuh-ssh-correlation.png)
-
-The common source address provided an indicator that could be used to correlate separate security events.
+This demonstrates an important SOC investigation principle: network and endpoint telemetry can be combined to provide greater context than either data source alone.
 
 ---
 
-# 14. Web Directory Enumeration
+### 6.8 Nmap HTTP Reconnaissance
 
-Gobuster was used to generate controlled HTTP directory-enumeration traffic against the Ubuntu Apache server.
+Additional reconnaissance was performed against the HTTP service on SOC-Ubuntu.
 
-The correct wordlist path was verified as:
+Suricata detected the traffic generated by Nmap and recorded both custom alerts and an ET Open signature.
+
+![Phase 6 - Suricata Nmap Web Reconnaissance](screenshots/phase6-suricata-nmap-web-recon(4).png)
+
+The alerts showed repeated communication between:
+
+- **Source:** `10.10.10.103`
+- **Destination:** `10.50.20.100`
+- **Destination Port:** `80`
+- **Interface:** DMZ
+
+This demonstrated that Suricata could observe application-layer reconnaissance in addition to basic network scanning.
+
+---
+
+### 6.9 ET Open Nmap Detection
+
+Suricata's ET Open ruleset generated the following detection:
+
+```text
+ET SCAN Possible Nmap User-Agent Observed
+```
+
+The detailed alert contained:
+
+- **Alert SID:** `2024364`
+- **Protocol:** TCP
+- **Source IP:** `10.10.10.103`
+- **Destination IP:** `10.50.20.100`
+- **Destination Port:** `80`
+- **Interface:** DMZ
+- **HTTP Hostname:** `10.50.20.100`
+- **HTTP URL:** `/HNAP1`
+- **HTTP User-Agent:** `Mozilla/5.0 (compatible; Nmap Scripting Engine; https://nmap.org/book/nse.html)`
+
+![Phase 6 - Suricata Nmap Alert Details](screenshots/phase6-incident1-suricata-nmap-details(4).png)
+
+This detection provides stronger context than a generic connection alert because Suricata identified an HTTP User-Agent associated with the Nmap Scripting Engine.
+
+---
+
+### 6.10 Web Enumeration with Gobuster
+
+Additional HTTP enumeration was generated against the Ubuntu web server using Gobuster.
+
+The directory enumeration used the Kali wordlist:
 
 ```text
 /usr/share/wordlists/dirb/common.txt
 ```
 
-The successful Gobuster command was:
+Example:
 
 ```bash
-gobuster dir \
--u http://10.50.20.100 \
--w /usr/share/wordlists/dirb/common.txt
+gobuster dir -u http://10.50.20.100 -w /usr/share/wordlists/dirb/common.txt
 ```
 
-Gobuster generated approximately:
+Gobuster generated thousands of HTTP requests while attempting to identify files and directories on the target web server.
 
-```text
-4,613 HTTP requests
-```
+Suricata observed the resulting traffic and generated repeated alerts between Kali and Ubuntu.
 
-and discovered responses including the Apache index page and multiple restricted resources.
+![Phase 6 - Suricata Gobuster Alerts](screenshots/phase6-suricata-gobuster-alerts(4).png)
 
-This simulated automated web-resource discovery against the DMZ server.
+This demonstrates how automated web enumeration produces network behavior that can be detected and investigated by an IDS.
 
 ---
 
-# 15. Suricata Gobuster Detection
+### 6.11 Incident Correlation in Wazuh
 
-After Gobuster completed, Suricata alerts were reviewed again.
-
-The large volume of HTTP enumeration traffic generated repeated detections.
-
-Observed alerts included:
+Wazuh Threat Hunting was used to search for activity associated with the Kali source IP:
 
 ```text
-Internal Recon - Kali to Ubuntu
-Kali to Ubuntu Http Detection
-```
-
-Relevant indicators remained consistent:
-
-```text
-Source:
 10.10.10.103
-
-Destination:
-10.50.20.100
-
-Destination Port:
-80
-
-Interface:
-DMZ
 ```
 
-![Suricata Gobuster Alerts](screenshots/phase6-suricata-gobuster-alerts.png)
+The search returned the SSH authentication events generated on SOC-Ubuntu.
 
-The repeated alerts corresponded with the thousands of HTTP requests generated during the directory enumeration.
+![Phase 6 - Wazuh SSH Incident Correlation](screenshots/phase6-incident1-wazuh-ssh-correlation(4).png)
+
+The events included:
+
+- Attempts to authenticate using a non-existent user
+- PAM authentication failure
+- Wazuh rule IDs `5710` and `5503`
+- Level `5` alerts
+- SOC-Ubuntu as the affected endpoint
+
+The detailed Wazuh evidence further connected the activity to the controlled Kali source.
+
+![Phase 6 - Wazuh SSH Attack Evidence](screenshots/phase6-wazuh-ssh-attack(4).png)
+
+The correlation established that the same source system responsible for the network reconnaissance also generated authentication activity against the Ubuntu endpoint.
 
 ---
 
-# 16. Final Wazuh Authentication Evidence
+### 6.12 Incident Timeline
 
-A final Wazuh search using:
+The collected evidence supports the following incident timeline:
 
-```text
-10.10.10.103
-```
-
-was performed with an expanded time range.
-
-The search returned the three authentication events associated with the controlled SSH testing:
-
-```text
-Rule 5710 — Level 5
-sshd: Attempt to login using a non-existent user
-
-Rule 5503 — Level 5
-PAM: User login failed.
-
-Rule 5710 — Level 5
-sshd: Attempt to login using a non-existent user
-```
-
-![Wazuh SSH Attack](screenshots/phase6-wazuh-ssh-attack.png)
-
-This provided a clean final view of the endpoint authentication detections associated with the Kali source address.
+| Stage | Activity | Evidence / Detection Source |
+|---|---|---|
+| 1 | Kali establishes connectivity to Ubuntu | SOC-Kali |
+| 2 | Nmap reconnaissance performed | SOC-Kali |
+| 3 | SSH service identified | Nmap |
+| 4 | Reconnaissance traffic observed | Suricata |
+| 5 | HTTP reconnaissance generated | Nmap |
+| 6 | Nmap HTTP User-Agent identified | Suricata / ET Open |
+| 7 | Web enumeration performed | Gobuster |
+| 8 | Enumeration traffic observed | Suricata |
+| 9 | SSH authentication attempted | SOC-Kali |
+| 10 | Invalid user authentication fails | SOC-Ubuntu |
+| 11 | Authentication event collected | Wazuh Agent |
+| 12 | SSH alert generated | Wazuh |
+| 13 | Event enriched with MITRE ATT&CK | Wazuh |
+| 14 | Network and endpoint telemetry correlated | SOC Investigation |
 
 ---
 
-# Security Event Correlation
+### 6.13 Detection Analysis
 
-The combined evidence produced the following investigation sequence:
+Phase 6 demonstrated the different visibility provided by network and endpoint security monitoring.
 
-```text
-SOC-Kali
-10.10.10.103
-     |
-     | Nmap Reconnaissance
-     v
-OPNsense / Suricata
-     |
-     | Recon Detection
-     v
-SOC-Ubuntu
-10.50.20.100
-     ^
-     |
-     | HTTP Service Discovery
-     |
-SOC-Kali
-     |
-     | Nmap HTTP Probes
-     v
-Suricata
-     |
-     | ET SCAN Nmap Detection
-     v
-SOC-Ubuntu
-     ^
-     |
-     | Gobuster Enumeration
-     |
-SOC-Kali
-     |
-     v
-Suricata HTTP / Recon Alerts
+#### Suricata — Network Visibility
 
-SOC-Kali
-     |
-     | SSH Authentication Attempts
-     v
-SOC-Ubuntu
-     |
-     | journald / sshd / PAM
-     v
-Wazuh
-     |
-     | Rules 5710 / 5503
-     v
-MITRE ATT&CK Mapping
-```
+Suricata provided information including:
 
-The common source:
+- Source IP
+- Destination IP
+- Source and destination ports
+- Network reconnaissance activity
+- HTTP reconnaissance activity
+- Nmap Scripting Engine identification
+- Automated web enumeration traffic
+- DMZ interface visibility
+- Custom IDS rule detections
+- ET Open signature detections
 
-```text
-10.10.10.103
-```
+#### Wazuh — Endpoint Visibility
 
-and target:
-
-```text
-10.50.20.100
-```
-
-allowed network and endpoint telemetry to be correlated during the investigation.
-
----
-
-# Incident Analysis
-
-## Source System
-
-```text
-SOC-Kali
-10.10.10.103
-```
-
-## Target System
-
-```text
-SOC-Ubuntu
-10.50.20.100
-```
-
-## Observed Activity
-
-The controlled activity included:
-
-- Network reconnaissance
-- Service/version discovery
-- HTTP reconnaissance
-- Automated web directory enumeration
-- SSH authentication attempts using a non-existent account
-
-## Network Evidence
-
-Suricata identified:
-
-- Internal reconnaissance traffic
-- Kali-to-Ubuntu HTTP traffic
-- Nmap Scripting Engine activity
-- High-volume HTTP enumeration activity
-- Traffic targeting SSH on TCP port 22
-
-## Endpoint Evidence
-
-Wazuh identified:
+Wazuh provided information including:
 
 - Failed SSH authentication
-- Authentication using a non-existent user
-- Source address `10.10.10.103`
-- Ubuntu as the affected endpoint
+- Invalid username
+- Source IP
+- Affected endpoint
+- Authentication-related rule IDs
+- Alert severity
+- Raw authentication logs
+- MITRE ATT&CK technique mappings
 
-## MITRE ATT&CK Evidence
+#### Correlated SOC View
 
-Wazuh mapped the authentication event to:
-
-```text
-T1110.001 — Password Guessing
-T1021.004 — SSH
-```
-
----
-
-# Analyst Assessment
-
-## Classification
-
-**True Positive**
-
-The detections accurately represented the controlled security activity generated during the lab.
-
-In a production environment, reconnaissance followed by unsuccessful authentication attempts against a DMZ server would warrant investigation unless the source was confirmed as an authorized security-testing system.
-
-## Severity
-
-**Medium**
-
-Reconnaissance and authentication attempts were observed, but no evidence of successful unauthorized authentication or system compromise was identified.
-
-## Recommended Response
-
-If this activity occurred unexpectedly in a production environment, potential response actions would include:
-
-- Validate whether the source system is authorized to perform security testing.
-- Investigate additional activity originating from the source.
-- Review authentication logs for successful access.
-- Review other systems contacted by the source.
-- Restrict or block the source if the activity is unauthorized.
-- Review exposed services on the target.
-- Preserve relevant IDS and endpoint telemetry.
-- Continue monitoring for follow-on activity.
-
----
-
-# Troubleshooting
-
-## Suricata Operational Verification
-
-A major lesson carried forward from the previous phase was that a valid Suricata configuration does not guarantee that the IDS process is running.
-
-Before Phase 6 testing, both the process and service were independently verified:
-
-```sh
-pgrep -af suricata
-service suricata status
-```
-
-This prevented attack-generation testing from being performed against an inactive IDS engine.
-
----
-
-## Ubuntu Authentication Logging
-
-The expected traditional authentication file:
+Together, the tools provided a more complete incident picture:
 
 ```text
-/var/log/auth.log
+Network Layer
+     |
+     | Suricata
+     v
+Reconnaissance / HTTP / SSH Traffic
+     |
+     +--------------------------+
+                                |
+                                v
+                         Endpoint Layer
+                                |
+                                | Wazuh
+                                v
+                    Authentication Failure
+                                |
+                                v
+                     MITRE ATT&CK Mapping
+                                |
+                                v
+                       Analyst Correlation
 ```
 
-was not available in the Ubuntu environment.
-
-Authentication telemetry was instead located through systemd journald.
-
-Useful commands included:
-
-```bash
-sudo journalctl -u ssh -n 50 --no-pager
-```
-
-and:
-
-```bash
-sudo journalctl -t sshd -n 100 --no-pager
-```
-
-This demonstrated the importance of identifying where telemetry actually exists rather than assuming a specific log file will always be present.
+Suricata showed **what was happening on the network**, while Wazuh showed **what happened on the endpoint**.
 
 ---
 
-## Wazuh Event Investigation
+### 6.14 SOC Investigation Summary
 
-Initial searches did not immediately reveal the expected SSH event.
-
-The Wazuh agent configuration was examined and confirmed to contain journald collection:
-
-```xml
-<localfile>
-  <log_format>journald</log_format>
-  <location>journald</location>
-</localfile>
-```
-
-A fresh controlled SSH attempt was generated, after which filtering on:
+The controlled incident originated from:
 
 ```text
+SOC-Kali
 10.10.10.103
 ```
 
-successfully identified the authentication alerts.
-
----
-
-## Gobuster Syntax and Wordlist Path
-
-Gobuster initially failed because of command syntax and an incorrect wordlist path.
-
-The correct path was:
+and targeted:
 
 ```text
-/usr/share/wordlists/dirb/common.txt
-```
-
-The working command was:
-
-```bash
-gobuster dir \
--u http://10.50.20.100 \
--w /usr/share/wordlists/dirb/common.txt
-```
-
-This reinforced the importance of verifying command syntax and file paths before assuming that a security test or security control has failed.
-
----
-
-# Lessons Learned
-
-## Network and Endpoint Telemetry Provide Different Perspectives
-
-Suricata provided visibility into network traffic crossing the monitored DMZ interface.
-
-Wazuh provided visibility into authentication activity occurring directly on Ubuntu.
-
-Neither data source alone provided the complete investigation.
-
-Correlating the two produced stronger evidence.
-
----
-
-## Detection Is Only the Beginning
-
-Generating an IDS or SIEM alert does not complete an investigation.
-
-The workflow used during Phase 6 was:
-
-```text
-Generate Activity
-      |
-      v
-Detect
-      |
-      v
-Validate
-      |
-      v
-Investigate
-      |
-      v
-Correlate
-      |
-      v
-Classify
-      |
-      v
-Document
-```
-
-This more closely represents a SOC analyst workflow than simply confirming that an alert exists.
-
----
-
-## Application-Layer Inspection Provides Valuable Context
-
-The Suricata Nmap alert initially appeared as a scan detection.
-
-Opening the alert revealed HTTP metadata identifying the Nmap Scripting Engine.
-
-This demonstrated why analysts should investigate underlying alert details rather than relying only on alert titles.
-
----
-
-## Common Indicators Enable Cross-Tool Correlation
-
-The source address:
-
-```text
-10.10.10.103
-```
-
-appeared in both network and endpoint security telemetry.
-
-The target:
-
-```text
+SOC-Ubuntu
 10.50.20.100
 ```
 
-remained consistent throughout the investigation.
-
-These shared indicators made it possible to connect separate events into a broader sequence of activity.
-
----
-
-## Troubleshooting Is Part of Security Analysis
-
-Several issues encountered during the phase were not failures of the security controls themselves.
-
-Examples included:
-
-- Authentication logs being stored in journald rather than `/var/log/auth.log`
-- Initial Wazuh searches not exposing the expected SSH event
-- Gobuster command syntax errors
-- An incorrect Gobuster wordlist path
-
-Systematically validating each layer helped isolate the actual cause of each issue.
-
----
-
-# Phase 6 Evidence
-
-The following screenshots were captured during Phase 6:
+The activity progressed through multiple observable stages:
 
 ```text
-phase6-nmap-reconnaissance.png
-phase6-suricata-recon-detection.png
-phase6-ssh-failed-login.png
-phase6-wazuh-ssh-detection.png
-phase6-wazuh-ssh-event-details.png
-phase6-wazuh-mitre-mapping.png
-phase6-suricata-ssh-correlation.png
-phase6-suricata-nmap-web-recon.png
-phase6-incident1-suricata-nmap-details.png
-phase6-incident1-wazuh-ssh-correlation.png
-phase6-suricata-gobuster-alerts.png
-phase6-wazuh-ssh-attack.png
+Reconnaissance
+      ↓
+Service Discovery
+      ↓
+HTTP Reconnaissance
+      ↓
+Web Enumeration
+      ↓
+SSH Authentication Attempt
+      ↓
+Endpoint Authentication Failure
+      ↓
+SIEM Detection
+      ↓
+MITRE ATT&CK Enrichment
+      ↓
+Network + Endpoint Correlation
+```
+
+This demonstrates a basic SOC investigation workflow where an analyst uses multiple telemetry sources rather than relying on a single alert.
+
+---
+
+### Lessons Learned
+
+- A single security alert rarely provides the complete picture of an incident.
+- Network IDS telemetry and endpoint telemetry complement each other during an investigation.
+- Suricata can identify reconnaissance activity occurring before or alongside endpoint events.
+- ET Open signatures can provide additional context beyond basic IP and port information.
+- Application-layer information such as the Nmap HTTP User-Agent can help identify the tool responsible for suspicious traffic.
+- Wazuh provides endpoint context that network monitoring alone cannot provide, including usernames and authentication results.
+- Source IP addresses and timestamps are valuable correlation points between security platforms.
+- MITRE ATT&CK mappings help translate raw security events into recognizable attacker behaviors.
+- Controlled attack simulation is an effective method for validating detection controls.
+- Successful traffic generation does not by itself prove that monitoring is operational; alerts must be confirmed in the corresponding security platforms.
+- Network connectivity, IDS operation, endpoint logging, agent collection, and SIEM ingestion must all function correctly for end-to-end monitoring to succeed.
+- Correlating Suricata and Wazuh evidence demonstrates a fundamental SOC workflow:
+
+```text
+Generate → Detect → Investigate → Correlate → Document
 ```
 
 ---
 
-# Phase 6 Result
+### Phase 6 Evidence
 
-Phase 6 successfully demonstrated controlled network reconnaissance, HTTP enumeration, authentication testing, IDS analysis, endpoint monitoring, MITRE ATT&CK mapping, and cross-tool security-event correlation.
+The following screenshots document the Phase 6 investigation:
 
-The phase demonstrated how network and endpoint telemetry can be combined to reconstruct suspicious activity and support a SOC investigation.
+1. `phase6-nmap-reconnaissance(4).png` — Nmap reconnaissance from Kali against Ubuntu.
+2. `phase6-suricata-recon-detection(4).png` — Suricata detection of Kali-to-Ubuntu reconnaissance.
+3. `phase6-ssh-failed-login(4).png` — Controlled failed SSH authentication.
+4. `phase6-wazuh-ssh-detection(4).png` — Wazuh SSH authentication alerts.
+5. `phase6-wazuh-ssh-event-details(4).png` — Detailed Wazuh SSH event information.
+6. `phase6-wazuh-mitre-mapping(4).png` — MITRE ATT&CK mapping of the SSH event.
+7. `phase6-suricata-ssh-correlation(4).png` — Suricata network evidence associated with SSH activity.
+8. `phase6-suricata-nmap-web-recon(4).png` — Suricata detection of Nmap HTTP reconnaissance.
+9. `phase6-incident1-suricata-nmap-details(4).png` — ET Open Nmap User-Agent alert details.
+10. `phase6-suricata-gobuster-alerts(4).png` — Suricata alerts generated during Gobuster enumeration.
+11. `phase6-incident1-wazuh-ssh-correlation(4).png` — Wazuh correlation of Kali-originated SSH activity.
+12. `phase6-wazuh-ssh-attack(4).png` — Wazuh SSH incident evidence.
 
-**Phase 6 — Network Security Analysis: ✅ Complete**
+---
+
+### Phase 6 Result
+
+**Status: Complete ✅**
+
+Phase 6 successfully demonstrated an end-to-end security incident generation, detection, investigation, and correlation workflow.
+
+Controlled reconnaissance, HTTP enumeration, and SSH authentication activity were generated from SOC-Kali (`10.10.10.103`) against SOC-Ubuntu (`10.50.20.100`).
+
+Suricata provided network-level visibility into reconnaissance and HTTP activity, including an ET Open detection identifying the Nmap Scripting Engine. Wazuh provided endpoint-level visibility into the failed SSH authentication, including the source IP, invalid username, alert severity, raw authentication event, and MITRE ATT&CK mappings.
+
+By correlating Suricata network telemetry with Wazuh endpoint telemetry, the lab demonstrated a core SOC analyst capability:
+
+**reconstructing suspicious activity using evidence collected from multiple security controls.**
 
 ---
 
