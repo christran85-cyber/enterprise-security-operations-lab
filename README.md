@@ -2911,9 +2911,9 @@ By correlating Suricata network telemetry with Wazuh endpoint telemetry, the lab
 
 ## Vulnerability Assessment, Remediation, and Validation
 
-Phase 7 focused on applying a vulnerability-management workflow against the SOC-Ubuntu system located inside the isolated DMZ.
+Phase 7 focused on applying a practical vulnerability-management workflow against the SOC-Ubuntu system located inside the isolated DMZ.
 
-The objective was to identify exposed network services, analyze potential security weaknesses, apply remediation, and validate that the security changes reduced information exposure without disrupting the required web service.
+The objective was to identify exposed services, analyze security weaknesses, apply remediation, and validate that the security changes reduced unnecessary exposure without disrupting the required web service.
 
 The systems involved were:
 
@@ -2969,49 +2969,58 @@ A targeted Nmap service/version scan was performed against TCP port `80`:
 sudo nmap -sV -p 80 10.50.20.100
 ```
 
-The scan confirmed:
+The scan confirmed that an Apache HTTP service was exposed on TCP port `80`.
 
-```text
-PORT   STATE SERVICE VERSION
-80/tcp open  http    Apache httpd
-```
-
-This verified that the HTTP service was reachable and provided a baseline for the vulnerability-management assessment.
+This provided the baseline for the vulnerability assessment and demonstrated what service information was visible from another system on the network.
 
 ---
 
-## 7.2 HTTP Service Analysis
+## 7.2 Apache Version Disclosure
 
-The Apache web server was examined directly using:
+The Apache web server was examined directly from SOC-Kali using:
 
 ```bash
 curl -I http://10.50.20.100
 ```
 
-Before remediation, the HTTP response disclosed detailed server-version information:
+Before remediation, the HTTP response disclosed:
 
 ```text
 HTTP/1.1 200 OK
 Server: Apache/2.4.66 (Ubuntu)
 ```
 
-This revealed:
+The response revealed:
 
 - Web server technology
-- Apache version
-- Operating-system distribution
+- Exact Apache version
+- Ubuntu operating-system platform
 
-Although version disclosure alone does not prove that a system is exploitable, unnecessary service information can assist reconnaissance by allowing an attacker to identify the software stack and research vulnerabilities associated with that version.
+Although version disclosure alone does not prove that the system is exploitable, unnecessary software information can assist reconnaissance.
+
+An attacker could use the disclosed version information to research vulnerabilities, configuration weaknesses, or attack techniques associated with the identified software.
 
 The finding was therefore treated as an **information-disclosure and attack-surface hardening issue**.
 
+### Snapshot 1 — Apache Version Disclosure
+
+![Apache Version Disclosure](images/phase7-apache-before-hardening.png)
+
+The initial assessment shows the remote Apache server exposing:
+
+```text
+Server: Apache/2.4.66 (Ubuntu)
+```
+
+This established the pre-remediation baseline.
+
 ---
 
-## 7.3 Vulnerability Research and Risk Analysis
+## 7.3 Vulnerability and Risk Analysis
 
-Service-version information identified during enumeration was reviewed against potential vulnerability information.
+Service-version information discovered during enumeration was evaluated as part of the vulnerability-management process.
 
-The assessment process demonstrated an important vulnerability-management distinction:
+The analysis followed:
 
 ```text
 Detected Software Version
@@ -3029,35 +3038,35 @@ Assess Actual Exposure
 Prioritize Remediation
 ```
 
-A version match or automated vulnerability reference does not automatically prove that a specific vulnerability is exploitable on the target.
+An identified software version or potential vulnerability match does not automatically prove that a vulnerability is exploitable.
 
-Additional factors may affect actual exposure, including:
+Additional factors can affect actual risk, including:
 
 - Distribution security patches
-- Backported fixes
+- Backported security fixes
 - Enabled Apache modules
 - Application configuration
 - Network exposure
 - Exploit prerequisites
 - Existing security controls
 
-For this phase, the directly validated weakness was unnecessary Apache version and platform disclosure.
+For this phase, the directly validated weakness was unnecessary Apache version and operating-system disclosure.
 
-The objective was therefore to reduce information available to an unauthenticated remote system without disrupting the HTTP service.
+The remediation objective was therefore to reduce externally visible information while maintaining HTTP service availability.
 
 ---
 
 ## 7.4 Apache Security Hardening
 
-The Apache security configuration was reviewed on SOC-Ubuntu.
+The Apache security configuration on SOC-Ubuntu was reviewed.
 
-The configuration file used for hardening was:
+The active Apache security configuration was located at:
 
 ```text
 /etc/apache2/conf-available/security.conf
 ```
 
-The following security directives were configured:
+The following directives were configured:
 
 ```apache
 ServerTokens Prod
@@ -3065,9 +3074,7 @@ ServerSignature Off
 TraceEnable Off
 ```
 
-These settings reduced unnecessary information exposure and disabled HTTP functionality that was not required by the lab web server.
-
----
+These settings were used to reduce unnecessary information disclosure and disable HTTP functionality that was not required by the lab web server.
 
 ### ServerTokens Prod
 
@@ -3077,29 +3084,21 @@ The following directive was configured:
 ServerTokens Prod
 ```
 
-`ServerTokens` controls how much information Apache provides in the HTTP `Server` response header.
+`ServerTokens` controls the amount of server information Apache provides in HTTP response headers.
 
-Before hardening, the server disclosed:
+Before remediation:
 
 ```text
 Apache/2.4.66 (Ubuntu)
 ```
 
-After configuring:
-
-```apache
-ServerTokens Prod
-```
-
-the response was reduced to:
+After remediation:
 
 ```text
 Apache
 ```
 
-This reduces the amount of software-version and operating-system information available during remote reconnaissance.
-
----
+This prevents the HTTP header from directly advertising the exact Apache version and Ubuntu platform.
 
 ### ServerSignature Off
 
@@ -3109,11 +3108,7 @@ The following directive was configured:
 ServerSignature Off
 ```
 
-`ServerSignature Off` prevents Apache from including detailed server-version information in server-generated pages such as error documents.
-
-This provides another layer of protection against unnecessary server fingerprinting.
-
----
+This prevents Apache from adding detailed server information to server-generated pages such as error documents.
 
 ### TraceEnable Off
 
@@ -3125,9 +3120,19 @@ TraceEnable Off
 
 This disables the HTTP TRACE method.
 
-TRACE was not required for the normal operation of the lab web server.
+TRACE was not required for the normal operation of the lab web server, so disabling it reduced unnecessary exposed functionality.
 
-Disabling unnecessary HTTP methods reduces exposed functionality and helps minimize the attack surface of the service.
+### Snapshot 2 — Apache Security Hardening
+
+![Apache Security Hardening](images/phase7-apache-security-config.png)
+
+The Apache security configuration shows the hardened directives:
+
+```apache
+ServerTokens Prod
+ServerSignature Off
+TraceEnable Off
+```
 
 ---
 
@@ -3135,46 +3140,53 @@ Disabling unnecessary HTTP methods reduces exposed functionality and helps minim
 
 Before applying the security changes to the running Apache service, the configuration was tested for syntax errors.
 
-The intended command was:
+The validation command was:
 
 ```bash
 sudo apache2ctl configtest
 ```
 
-During testing, the command was initially entered incorrectly as:
+During troubleshooting, the command was initially entered incorrectly as:
 
 ```bash
 sudo apache2ct configtest
 ```
 
-The shell returned:
+The shell returned a command-not-found error.
 
-```text
-sudo: 'apache2ct': command not found
-```
-
-The command was corrected to:
+The correct Apache administration command was then used:
 
 ```bash
 sudo apache2ctl configtest
 ```
 
-Apache then returned:
-
-```text
-AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 127.0.1.1.
-Syntax OK
-```
-
-The `AH00558` message was a warning concerning the server's fully qualified domain name.
-
-The important validation result was:
+Apache returned:
 
 ```text
 Syntax OK
 ```
 
-This confirmed that the Apache configuration remained syntactically valid after the security changes.
+An `AH00558` warning concerning the server's fully qualified domain name was also displayed.
+
+The warning did not represent a configuration syntax failure.
+
+The important result was:
+
+```text
+Syntax OK
+```
+
+This confirmed that Apache could safely read the modified configuration.
+
+### Snapshot 3 — Apache Configuration Validation
+
+![Apache Configuration Validation](images/phase7-apache-configtest.png)
+
+The configuration test confirms:
+
+```text
+Syntax OK
+```
 
 The validation process followed:
 
@@ -3188,45 +3200,50 @@ apache2ctl configtest
 Syntax OK
         |
         v
-Apply Configuration
+Reload Apache
 ```
+
+This reduced the risk of applying a malformed configuration that could interrupt the web service.
 
 ---
 
 ## 7.6 Apply Remediation
 
-After validating the configuration, Apache was reloaded:
+After the configuration passed validation, Apache was reloaded:
 
 ```bash
 sudo systemctl reload apache2
 ```
 
-Reloading the service applied the configuration changes without requiring the Ubuntu system to restart.
+The command instructs the running Apache service to reread its configuration without requiring the Ubuntu system to restart.
 
-The HTTP service was then tested locally:
+The web server was then tested locally:
 
 ```bash
 curl -I http://127.0.0.1
 ```
 
-The response confirmed:
+The response showed:
 
 ```text
 HTTP/1.1 200 OK
 Server: Apache
 ```
 
-The HTTP service remained operational while the detailed Apache version and Ubuntu platform information were no longer exposed.
+This confirmed that:
 
-This demonstrated that the remediation improved the security configuration without disrupting required functionality.
+- Apache remained operational
+- HTTP port `80` remained functional
+- The exact Apache version was no longer exposed
+- The Ubuntu platform was no longer exposed
 
 ---
 
 ## 7.7 Remote Remediation Validation
 
-The security changes were then validated remotely from SOC-Kali.
+Local validation alone was not considered sufficient because the original finding was observable remotely.
 
-The HTTP headers were queried again:
+SOC-Kali was therefore used to repeat the HTTP header test against SOC-Ubuntu:
 
 ```bash
 curl -I http://10.50.20.100
@@ -3244,61 +3261,68 @@ After remediation:
 Server: Apache
 ```
 
-The result demonstrated a measurable before-and-after security improvement:
-
-```text
-Before Remediation
-        |
-        v
-Apache/2.4.66 (Ubuntu)
-        |
-        | Apache Hardening
-        v
-After Remediation
-        |
-        v
-Apache
-```
-
-The server continued returning:
+The server continued responding:
 
 ```text
 HTTP/1.1 200 OK
 ```
 
-This confirmed two important results:
+This demonstrated that the security change was visible from the external analyst perspective while the required HTTP service remained operational.
 
-1. Detailed version and platform information was no longer disclosed.
-2. The HTTP service remained available after remediation.
+### Snapshot 4 — Apache Hardening Validation
+
+![Apache Hardening Validation](images/phase7-apache-after-hardening.png)
+
+The before-and-after validation demonstrates the security improvement:
+
+```text
+Before
+Apache/2.4.66 (Ubuntu)
+        |
+        | Apache Hardening
+        v
+After
+Apache
+```
+
+This confirms that detailed software-version and operating-system information was successfully removed from the HTTP response header.
 
 ---
 
-## 7.8 Nmap Rescan
+## 7.8 Post-Remediation Nmap Rescan
 
 The Ubuntu target was rescanned from SOC-Kali after remediation.
 
-The same type of service enumeration used during the initial assessment was repeated:
+The targeted service/version scan was repeated:
 
 ```bash
 sudo nmap -sV -p 80 10.50.20.100
 ```
 
-The rescan returned:
+The post-remediation result showed:
 
 ```text
 PORT   STATE SERVICE VERSION
 80/tcp open  http    Apache httpd
 ```
 
-Nmap could still identify the general web-server technology, but the specific Apache version was no longer disclosed through the service response.
+Nmap could still identify the general HTTP server technology as Apache.
 
-The comparison was:
+However, the exact Apache version and Ubuntu platform were no longer provided.
+
+### Snapshot 5 — Post-Remediation Nmap Scan
+
+![Post-Remediation Nmap Scan](images/phase7-nmap-rescan.png)
+
+The post-remediation Nmap scan demonstrates that the HTTP service remains available while detailed service-version information is no longer exposed.
+
+The validation process was:
 
 ```text
 Initial Assessment
        |
        v
-Apache Version Exposed
+Detailed Version Disclosure
        |
        v
 Remediation
@@ -3307,24 +3331,24 @@ Remediation
 Nmap Rescan
        |
        v
-General Apache Service Identified
+Apache httpd
 Exact Version Not Disclosed
 ```
 
 This demonstrates an important vulnerability-management principle:
 
-**Remediation should be validated from the same external perspective used to identify the original finding.**
+**Remediation should be validated from the same external perspective used to identify the original security condition.**
 
 ---
 
 ## 7.9 HTTP TRACE Validation
 
-The HTTP TRACE method was tested remotely from SOC-Kali.
+The HTTP TRACE method was also tested remotely from SOC-Kali.
 
-The validation command was:
+The intended validation command was:
 
 ```bash
-curl -i -X TRACE http://10.50.20.100
+curl -i -X TRACE http://10.50.20.100/
 ```
 
 Apache returned:
@@ -3332,9 +3356,6 @@ Apache returned:
 ```text
 HTTP/1.1 405 Method Not Allowed
 Server: Apache
-Allow:
-Content-Length: 262
-Content-Type: text/html; charset=iso-8859-1
 ```
 
 The response:
@@ -3343,15 +3364,19 @@ The response:
 405 Method Not Allowed
 ```
 
-confirmed that TRACE was not permitted.
+confirmed that TRACE requests were rejected.
 
-This validated the Apache configuration:
+This validated the Apache security directive:
 
 ```apache
 TraceEnable Off
 ```
 
-The validation path was:
+### Snapshot 6 — HTTP TRACE Disabled
+
+![HTTP TRACE Disabled](images/phase7-trace-validation.png)
+
+The remote TRACE test demonstrates:
 
 ```text
 SOC-Kali
@@ -3370,7 +3395,7 @@ TraceEnable Off
 405 Method Not Allowed
 ```
 
-This demonstrated that the hardening control was active from the perspective of a remote system.
+This provided an additional independently verified security control.
 
 ---
 
@@ -3397,7 +3422,7 @@ The objective was to reduce unnecessary exposure while preserving required servi
 
 ## 7.11 Vulnerability Management Analysis
 
-Phase 7 demonstrated that vulnerability management extends beyond simply running a vulnerability scanner.
+Phase 7 demonstrated that vulnerability management extends beyond simply identifying a potential weakness.
 
 A complete workflow requires:
 
@@ -3425,27 +3450,27 @@ Validate
 
 ### Discover
 
-Identify the system being assessed and verify that it is reachable.
+Identify the system being assessed and confirm that it is reachable.
 
 ### Enumerate
 
-Determine which network services are exposed.
+Determine which network services are exposed and what information those services reveal.
 
 ### Analyze
 
-Examine the exposed services and determine whether their configuration creates unnecessary security risk.
+Determine whether the exposed information or configuration represents meaningful security risk.
 
 ### Prioritize
 
-Determine which findings should be addressed based on exposure, impact, likelihood, and operational requirements.
+Evaluate the finding based on exposure, potential impact, likelihood, and operational requirements.
 
 ### Remediate
 
-Modify the affected configuration to reduce the identified security risk.
+Modify the affected configuration to reduce the identified security exposure.
 
 ### Rescan
 
-Repeat the original assessment from the analyst system.
+Repeat the original assessment after remediation.
 
 ### Validate
 
@@ -3455,7 +3480,7 @@ Confirm that:
 - The intended control is active
 - The required service remains operational
 
-This process transforms vulnerability scanning into a complete vulnerability-management lifecycle.
+This transforms vulnerability assessment into a complete vulnerability-management lifecycle.
 
 ---
 
@@ -3463,53 +3488,152 @@ This process transforms vulnerability scanning into a complete vulnerability-man
 
 Several important troubleshooting and security-administration lessons were demonstrated during Phase 7.
 
+### Configuration Validation Does Not Prove the Control Is Effective
+
+Apache initially returned:
+
+```text
+Syntax OK
+```
+
+during configuration validation.
+
+However, remote testing still showed:
+
+```text
+Server: Apache/2.4.66 (Ubuntu)
+```
+
+This demonstrated an important distinction:
+
+```text
+Valid Configuration ≠ Effective Security Control
+```
+
+A configuration can be syntactically correct while another active configuration overrides the desired security setting.
+
+---
+
+### Apache Configuration Precedence Matters
+
+During troubleshooting, Apache's active security configuration was reviewed.
+
+The existing configuration contained active settings such as:
+
+```apache
+ServerTokens OS
+ServerSignature On
+```
+
+while the custom hardening configuration contained:
+
+```apache
+ServerTokens Prod
+ServerSignature Off
+```
+
+The enabled Apache configuration files were examined to determine how the security settings were being loaded.
+
+This revealed a configuration conflict.
+
+The existing Apache security configuration was then corrected directly.
+
+This demonstrated that administrators must understand not only what is written in a configuration file, but also:
+
+- Whether the file is enabled
+- When it is loaded
+- Whether another file defines the same directive
+- Which effective setting Apache ultimately uses
+
+---
+
+### Local and Remote Validation Are Both Important
+
+The Apache configuration was first tested locally using:
+
+```bash
+curl -I http://127.0.0.1
+```
+
+The service was then tested remotely from SOC-Kali using:
+
+```bash
+curl -I http://10.50.20.100
+```
+
+This provided two different validation perspectives.
+
+The final verification path became:
+
+```text
+Configuration Change
+        |
+        v
+Syntax Validation
+        |
+        v
+Apache Reload
+        |
+        v
+Local Test
+        |
+        v
+Remote Test
+        |
+        v
+Nmap Rescan
+        |
+        v
+TRACE Validation
+```
+
+---
+
 ### Command Accuracy Matters
 
-During Apache validation, the command:
+During Apache validation, an incorrect command was entered:
 
 ```bash
 sudo apache2ct configtest
 ```
 
-was entered instead of:
+instead of:
 
 ```bash
 sudo apache2ctl configtest
 ```
 
-The shell correctly returned:
-
-```text
-command not found
-```
-
-The issue was not an Apache failure.
+The resulting command-not-found message was not evidence of an Apache failure.
 
 It was a command-entry error.
 
-This demonstrates the importance of distinguishing between:
+This demonstrates why troubleshooting should distinguish between:
 
 ```text
-Tool Failure
-Configuration Failure
-Service Failure
-Network Failure
 Command Error
+      |
+      v
+Configuration Error
+      |
+      v
+Service Error
+      |
+      v
+Network Error
+      |
+      v
+Security Control Error
 ```
 
-before changing the environment during troubleshooting.
+before making additional changes.
 
 ---
 
 ### Warnings and Errors Must Be Distinguished
 
-Apache configuration validation displayed:
+Apache configuration validation displayed an `AH00558` message concerning the server's fully qualified domain name.
 
-```text
-AH00558: apache2: Could not reliably determine the server's fully qualified domain name...
-```
-
-However, the command also returned:
+However, the configuration test still returned:
 
 ```text
 Syntax OK
@@ -3517,11 +3641,11 @@ Syntax OK
 
 The warning therefore did not indicate that the security configuration had failed.
 
-Analysts and administrators should evaluate the complete command output instead of assuming every warning represents a fatal error.
+Security administrators should evaluate the complete output rather than treating every warning as a fatal error.
 
 ---
 
-### Validate Configuration Before Reloading Services
+### Validate Before Reloading Services
 
 The Apache configuration was tested before the service was reloaded:
 
@@ -3541,30 +3665,22 @@ Reload Service
 Verify Service
 ```
 
-This reduces the possibility that an invalid configuration will cause a production service outage.
+This reduces the possibility that a malformed configuration will interrupt an operational service.
 
 ---
 
 ### Remediation Requires Verification
 
-Changing a configuration file does not prove that a vulnerability or security weakness has been remediated.
+Changing a configuration file does not prove that a security weakness has been remediated.
 
 The Apache changes were independently validated using:
 
-```text
-Local curl
-     |
-     v
-Remote curl
-     |
-     v
-Nmap Rescan
-     |
-     v
-HTTP TRACE Test
-```
+- Local HTTP header inspection
+- Remote HTTP header inspection
+- Nmap service/version rescanning
+- HTTP TRACE testing
 
-Each validation method provided different evidence that the remediation was successfully applied.
+This provided evidence that the configuration was actually loaded and changed externally observable behavior.
 
 ---
 
@@ -3576,17 +3692,15 @@ After remediation, Apache continued returning:
 HTTP/1.1 200 OK
 ```
 
-This confirmed that the required web service remained operational.
+This demonstrated that the security hardening did not disrupt the required web service.
 
-A security improvement that unnecessarily breaks required business functionality may introduce a different operational risk.
-
-Effective remediation should therefore reduce security exposure while preserving required availability.
+Effective remediation should reduce risk while maintaining required functionality.
 
 ---
 
 ### Version Detection Requires Context
 
-Service-version detection can help identify software that may be associated with known vulnerabilities.
+Service-version detection can help identify software associated with potential vulnerabilities.
 
 However:
 
@@ -3594,51 +3708,11 @@ However:
 Version Match ≠ Confirmed Exploitability
 ```
 
-An identified software version should not automatically be treated as proof that a vulnerability is exploitable.
+Operating-system vendors may provide security fixes through patched or backported packages.
 
-Factors such as operating-system patches, backported security fixes, enabled components, configuration, and exposure must also be considered.
+Software configuration, enabled modules, network exposure, and exploit prerequisites must also be considered.
 
-This reinforces the difference between:
-
-```text
-Potential Vulnerability
-        |
-        v
-Analyst Validation
-        |
-        v
-Confirmed Finding
-```
-
----
-
-### External Validation Is Important
-
-The remediation was first validated locally on SOC-Ubuntu.
-
-However, the system was also tested again from SOC-Kali.
-
-This was important because the original exposure existed from the perspective of another system on the network.
-
-The validation therefore followed:
-
-```text
-Apply Fix
-    |
-    v
-Local Validation
-    |
-    v
-Remote Validation
-    |
-    v
-Rescan
-    |
-    v
-Confirm Risk Reduction
-```
-
-This provides stronger evidence than checking the configuration file alone.
+Vulnerability findings should therefore be validated before concluding that a system is exploitable.
 
 ---
 
@@ -3687,7 +3761,7 @@ Apache Reload
 Local Validation
       |
       v
-Remote Rescan
+Remote Validation
       |
       +-- curl
       |
@@ -3700,6 +3774,8 @@ Validated Result
       |
       +-- Server: Apache
       |
+      +-- Nmap: Apache httpd
+      |
       +-- TRACE: 405 Method Not Allowed
       |
       +-- HTTP: 200 OK
@@ -3710,24 +3786,27 @@ Remediation Validated
 
 ---
 
-## 7.14 Phase 7 Evidence
+## Phase 7 Evidence
 
-The following screenshots document the vulnerability-management workflow:
+The following screenshots document the Phase 7 vulnerability-management workflow:
 
-1. `phase7-apache-before-hardening.png` — Apache HTTP headers before remediation showing detailed version and Ubuntu platform information.
-2. `phase7-apache-security-config.png` — Apache security configuration showing the hardening directives.
+1. `phase7-apache-before-hardening.png` — Apache version and Ubuntu platform disclosure before remediation.
+2. `phase7-apache-security-config.png` — Apache security configuration containing the hardening directives.
 3. `phase7-apache-configtest.png` — Apache configuration validation returning `Syntax OK`.
-4. `phase7-apache-after-hardening.png` — HTTP headers after remediation showing the reduced `Server: Apache` response.
-5. `phase7-nmap-rescan.png` — Nmap service rescan after remediation.
-6. `phase7-trace-validation.png` — Remote HTTP TRACE test returning `405 Method Not Allowed`.
+4. `phase7-apache-after-hardening.png` — Remote before-and-after HTTP header validation.
+5. `phase7-nmap-rescan.png` — Post-remediation Nmap service/version scan.
+6. `phase7-trace-validation.png` — HTTP TRACE request rejected with `405 Method Not Allowed`.
 
-The evidence demonstrates the progression:
+The evidence demonstrates:
 
 ```text
 Initial Finding
       |
       v
-Security Configuration
+Security Analysis
+      |
+      v
+Configuration Hardening
       |
       v
 Configuration Validation
@@ -3736,15 +3815,15 @@ Configuration Validation
 Remediation
       |
       v
-Rescan
+Remote Rescan
       |
       v
-Validation
+Security Validation
 ```
 
 ---
 
-## Phase 7 Outcome
+# Phase 7 Outcome
 
 Phase 7 successfully demonstrated a practical vulnerability-management, remediation, and validation lifecycle against the SOC-Ubuntu DMZ system.
 
@@ -3757,11 +3836,12 @@ The completed work included:
 - Information-disclosure assessment
 - Risk analysis
 - Apache configuration hardening
+- Apache configuration-precedence troubleshooting
 - Server-version disclosure reduction
 - Operating-system disclosure reduction
 - HTTP TRACE restriction
-- Apache configuration syntax validation
-- Service reload
+- Configuration syntax validation
+- Apache service reload
 - Local remediation validation
 - Remote remediation validation
 - Nmap rescanning
@@ -3782,6 +3862,14 @@ After remediation, the response was reduced to:
 Apache
 ```
 
+The post-remediation Nmap scan returned:
+
+```text
+Apache httpd
+```
+
+without identifying the exact Apache version.
+
 HTTP TRACE requests were rejected with:
 
 ```text
@@ -3794,15 +3882,15 @@ while the web server continued returning:
 HTTP/1.1 200 OK
 ```
 
-This demonstrated that the remediation reduced unnecessary information exposure and functionality while preserving the required HTTP service.
+The remediation therefore reduced unnecessary information exposure and HTTP functionality while preserving the required web service.
 
-The final Phase 7 workflow demonstrated:
+The completed vulnerability-management lifecycle was:
 
 **Discover → Enumerate → Analyze → Prioritize → Remediate → Rescan → Validate**
 
 **Phase 7 Status: COMPLETE**
 
-The vulnerability-management baseline is now complete, and the environment is ready to proceed to **Phase 8 — Security Operations SQL Database**.
+The environment is now ready to proceed to **Phase 8 — Security Operations SQL Database**.
 
 ---
 
