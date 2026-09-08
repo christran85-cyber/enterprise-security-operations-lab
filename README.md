@@ -3629,98 +3629,736 @@ Phase 8 will build on the telemetry, detection, investigation, and vulnerability
 
 ---
 
-# Phase 8: Security Operations SQL Database
+# Phase 8 — Security Automation & Response
 
-## PostgreSQL SecurityOpsDB
+## Status: ✅ COMPLETE
 
-PostgreSQL is installed on the Security Server.
+Phase 8 focused on integrating PostgreSQL security data with Python automation to create a basic automated SOC incident-response workflow.
 
-The custom `SecurityOpsDB` database stores security information generated throughout the project.
+The objective was to move beyond manually querying security data and demonstrate how Python can retrieve incidents from the SecurityOpsDB database, evaluate incident severity, automatically update incident status, and create an audit trail documenting the actions performed by the automation.
 
-## Tables
+The completed workflow was:
 
 ```text
-Assets
-Users
-SecurityEvents
-Alerts
-Vulnerabilities
-Incidents
-Indicators
-NetworkConnections
-ScanResults
-RemediationActions
-IncidentAudit
+Security Incident
+       |
+       v
+PostgreSQL SecurityOpsDB
+       |
+       v
+Python Automation
+       |
+       v
+Retrieve Incident
+       |
+       v
+Evaluate Severity
+       |
+       +---- High ------> Escalated
+       |
+       +---- Medium ----> Reviewed
+       |
+       +---- Low -------> Reviewed
+       |
+       v
+Update Incident Record
+       |
+       v
+Create Automation Log
+       |
+       v
+Validate Database Changes
 ```
 
-## SQL Skills Demonstrated
+---
 
-- CREATE TABLE
-- INSERT
-- UPDATE
-- DELETE
-- SELECT
-- WHERE
-- JOIN
-- GROUP BY
-- ORDER BY
-- COUNT
-- SUM
-- AVG
-- Date/time functions
-- Views
-- Triggers
-- Functions
-- Audit tables
+## Objectives
 
-## Example — Critical Vulnerabilities
+The objectives of Phase 8 were to:
 
-```sql
-SELECT
-    Assets.Hostname,
-    COUNT(Vulnerabilities.VulnerabilityID) AS CriticalFindings
-FROM Assets
-JOIN Vulnerabilities
-    ON Assets.AssetID = Vulnerabilities.AssetID
-WHERE Vulnerabilities.Severity = 'Critical'
-GROUP BY Assets.Hostname
-ORDER BY CriticalFindings DESC;
+- Use PostgreSQL as a security operations data store
+- Create and query security incident records
+- Connect Python to PostgreSQL
+- Retrieve incidents programmatically
+- Evaluate incident severity using Python logic
+- Automatically determine an incident response action
+- Update incident status in PostgreSQL
+- Record automated actions in an audit table
+- Generate security information from database records
+- Validate automated database modifications
+- Troubleshoot Python, PostgreSQL, permissions, and application logic
+- Demonstrate a basic Security Orchestration, Automation, and Response workflow
+
+---
+
+## Systems and Technologies Used
+
+| Component | Purpose |
+|---|---|
+| SOC-Wazuh | Security server and automation host |
+| PostgreSQL | Security operations database |
+| SecurityOpsDB | Stores incident and automation information |
+| Python 3 | Security-response automation |
+| psycopg | PostgreSQL connectivity from Python |
+| Linux CLI | Script execution and validation |
+
+---
+
+# Step 1 — PostgreSQL Incident Records
+
+Security incident records were stored inside the PostgreSQL `SecurityOpsDB` database.
+
+The incident data represented security activity previously demonstrated throughout the lab, including:
+
+- SSH brute-force activity
+- Network reconnaissance
+- Security severity
+- Incident status
+- Detection source
+
+Example incident information included:
+
+```text
+Incident 1
+Type: SSH Brute Force
+Severity: High
+Detected By: Wazuh + Suricata
+
+Incident 2
+Type: Network Reconnaissance
+Severity: Medium
+Detected By: Suricata
 ```
 
-## Example — Security Events by Source
+These records provided structured security data that could be processed by the Python automation script.
 
-```sql
-SELECT
-    SourceIP,
-    COUNT(*) AS EventCount
-FROM SecurityEvents
-GROUP BY SourceIP
-ORDER BY EventCount DESC;
+### Snapshot 1 — PostgreSQL Incident Records
+
+![PostgreSQL Incident Records](images/phase8-postgresql-incident-records.png)
+
+This establishes the incident data used by the automation workflow.
+
+---
+
+# Step 2 — SecurityOpsDB Incident Query
+
+The PostgreSQL incident table was queried to review the security incidents before automation.
+
+The query returned:
+
+- Incident ID
+- Incident type
+- Severity
+- Incident status
+- Detection source
+
+This demonstrated how SQL can retrieve structured security information for analyst review or automated processing.
+
+### Snapshot 2 — SecurityOpsDB Incident Query
+
+![SecurityOpsDB Incident Query](images/phase8-securityops-incident-query.png)
+
+The database query provided the input data that would later be processed automatically using Python.
+
+---
+
+# Step 3 — Python Security Automation Script
+
+A Python script named:
+
+```text
+securityops_automation.py
 ```
 
-### Snapshot 1 — SecurityOpsDB
+was created to interact directly with PostgreSQL.
 
-![SecurityOpsDB](images/phase8-database.png)
+The script established a connection to the SecurityOpsDB database and retrieved security incidents requiring processing.
 
-### Snapshot 2 — Tables
+The automation workflow was:
 
-![SecurityOpsDB Tables](images/phase8-tables.png)
+```text
+Connect to SecurityOpsDB
+        |
+        v
+Query Incident Table
+        |
+        v
+Retrieve Incidents
+        |
+        v
+Process Each Incident
+        |
+        v
+Evaluate Severity
+        |
+        v
+Determine Response
+        |
+        v
+Update Database
+        |
+        v
+Create Audit Record
+```
 
-### Snapshot 3 — JOIN Analysis
+The script used Python conditional logic to determine the appropriate response based on incident severity.
 
-![SQL JOIN](images/phase8-join.png)
+Example:
 
-### Snapshot 4 — Security Analytics
+```python
+if severity == "High":
+    priority = "IMMEDIATE REVIEW"
+    new_status = "Escalated"
 
-![SQL Analytics](images/phase8-analytics.png)
+elif severity == "Medium":
+    priority = "STANDARD REVIEW"
+    new_status = "Reviewed"
 
-### Snapshot 5 — Trigger / Audit
+else:
+    priority = "LOW PRIORITY"
+    new_status = "Reviewed"
+```
 
-![SQL Audit](images/phase8-audit.png)
+This demonstrates how automation logic can translate security-event characteristics into repeatable SOC response actions.
 
-### Outcome
+### Snapshot 3 — Python Security Automation
 
-SQL is used directly for cybersecurity data storage, correlation, investigation, and reporting.
+![Python Security Automation](images/phase8-python-automation.png)
+
+---
+
+# Step 4 — Automated Incident Processing
+
+The Python script was executed against the incident records stored in PostgreSQL.
+
+During execution, the script processed each incident and displayed:
+
+- Incident ID
+- Incident type
+- Severity
+- Response action
+- Detection source
+
+Example output:
+
+```text
+[+] Processing incident 1: SSH Brute Force
+    Severity: High
+    Action: IMMEDIATE REVIEW
+    Detected By: Wazuh + Suricata
+
+[+] Processing incident 2: Network Reconnaissance
+    Severity: Medium
+    Action: STANDARD REVIEW
+    Detected By: Suricata
+```
+
+High-severity activity received an immediate-review response while medium-severity activity received a standard-review response.
+
+### Snapshot 4 — Python Automation Processing
+
+![Python Automation Processing](images/phase8-python-automation-processing.png)
+
+This confirmed that Python successfully retrieved and processed security incidents stored in PostgreSQL.
+
+---
+
+# Step 5 — Automated Incident Status Changes
+
+The Python automation modified the PostgreSQL incident records according to the severity logic.
+
+The automated response produced:
+
+| Incident | Severity | Automated Action | New Status |
+|---|---|---|---|
+| SSH Brute Force | High | IMMEDIATE REVIEW | Escalated |
+| Network Reconnaissance | Medium | STANDARD REVIEW | Reviewed |
+
+The workflow demonstrated:
+
+```text
+Security Detection
+       |
+       v
+Severity Evaluation
+       |
+       v
+Automated Decision
+       |
+       v
+Incident Status Change
+```
+
+Instead of requiring an analyst to manually update every incident, predefined logic performed the initial triage.
+
+---
+
+# Step 6 — Automation Audit Logging
+
+Automated security actions should be traceable.
+
+An `automation_log` table was used to record changes made by the Python script.
+
+The audit records included:
+
+- Log ID
+- Incident ID
+- Previous status
+- New status
+- Action taken
+- Processing timestamp
+
+The workflow was:
+
+```text
+Incident Status
+Investigated
+      |
+      v
+Python Automation
+      |
+      +---- High Severity
+      |          |
+      |          v
+      |      Escalated
+      |
+      +---- Medium Severity
+                 |
+                 v
+              Reviewed
+      |
+      v
+automation_log
+      |
+      v
+Permanent Audit Record
+```
+
+### Snapshot 5 — Python Automation Audit Log
+
+![Python Automation Audit Log](images/phase8-python-automation-audit-log.png)
+
+The audit log demonstrated that automated actions were recorded inside PostgreSQL rather than occurring without documentation.
+
+---
+
+# Step 7 — Incident Status Verification
+
+After the Python automation completed, the PostgreSQL incident table was queried again.
+
+The resulting records confirmed:
+
+```text
+Incident 1
+SSH Brute Force
+High
+Escalated
+Wazuh + Suricata
+
+Incident 2
+Network Reconnaissance
+Medium
+Reviewed
+Suricata
+```
+
+### Snapshot 6 — Incident Status Automation Verified
+
+![Incident Status Automation Verified](images/phase8-incident-status-automation-verified.png)
+
+This validation was important because successful script execution alone does not prove that the expected database changes occurred.
+
+The resulting database state must also be verified.
+
+---
+
+# Step 8 — Python and PostgreSQL Security Reporting
+
+The incident information stored inside PostgreSQL could also be queried and presented as security operations data.
+
+Combining Python and PostgreSQL creates a foundation for future automation capabilities such as:
+
+- Incident summaries
+- Severity statistics
+- Detection-source statistics
+- Automated SOC reports
+- Vulnerability reports
+- IOC correlation
+- Alert enrichment
+- Security metrics
+
+### Snapshot 7 — Python PostgreSQL Report
+
+![Python PostgreSQL Report](images/phase8-python-postgresql-report.png)
+
+This demonstrates how structured security data can be transformed into information useful for SOC analysis and reporting.
+
+---
+
+# Step 9 — End-to-End Automation Validation
+
+The final validation compared the automation audit trail with the current incident records.
+
+The `automation_log` demonstrated status transitions such as:
+
+```text
+Investigated → Escalated
+Investigated → Reviewed
+```
+
+The incident table independently confirmed the resulting statuses:
+
+```text
+SSH Brute Force
+High
+Escalated
+
+Network Reconnaissance
+Medium
+Reviewed
+```
+
+### Snapshot 8 — End-to-End Automation Validation
+
+![End-to-End Automation Validation](images/phase8-automation-validation.png)
+
+This provided evidence that the complete automation workflow operated successfully:
+
+```text
+PostgreSQL Incident
+        |
+        v
+Python Processing
+        |
+        v
+Severity Evaluation
+        |
+        v
+Automated Response
+        |
+        v
+Database UPDATE
+        |
+        v
+Automation Audit Log
+        |
+        v
+PostgreSQL Validation
+```
+
+---
+
+# Security Automation Architecture
+
+Phase 8 connected database-driven security operations with automated response logic.
+
+```text
+        Security Telemetry
+               |
+        +------+------+
+        |             |
+      Wazuh        Suricata
+        |             |
+        +------+------+
+               |
+               v
+        Security Incident
+               |
+               v
+      PostgreSQL SecurityOpsDB
+               |
+               v
+        Python Automation
+               |
+        +------+------+
+        |             |
+        v             v
+ Severity Logic   Incident Data
+        |
+        v
+ Automated Decision
+        |
+   +----+---------+
+   |              |
+   v              v
+Escalated       Reviewed
+   |              |
+   +------+-------+
+          |
+          v
+     Incident Table
+          |
+          v
+    Automation Log
+          |
+          v
+      SOC Validation
+```
+
+---
+
+# Troubleshooting and Lessons Learned
+
+Phase 8 included several important troubleshooting scenarios involving Python, PostgreSQL, Linux permissions, and automation logic.
+
+## Python Syntax Validation
+
+Before executing the automation against PostgreSQL, Python syntax was validated using:
+
+```bash
+python3 -m py_compile securityops_automation.py
+```
+
+No output indicated that Python successfully compiled the script.
+
+However:
+
+```text
+Valid Python Syntax ≠ Correct Automation Logic
+```
+
+A script can pass syntax validation while still contain logical, database, or runtime problems.
+
+---
+
+## Python Indentation and Processing Logic
+
+During development, indentation problems affected the location of database operations inside the incident-processing loop.
+
+The final structure ensured that each incident independently performed:
+
+1. Severity evaluation
+2. Incident status update
+3. Automation-log insertion
+
+This demonstrated that Python indentation affects program logic, not simply formatting.
+
+---
+
+## PostgreSQL Column Name Validation
+
+During database validation, an incorrect column name was referenced:
+
+```text
+detect_by
+```
+
+PostgreSQL returned an error and suggested the actual column:
+
+```text
+detected_by
+```
+
+After correcting the query, the incident records were successfully returned.
+
+### Lesson Learned
+
+Database schemas should be verified rather than relying on assumed column names.
+
+PostgreSQL error messages can provide useful troubleshooting information when a query references an invalid field.
+
+---
+
+## File Permission and Execution Context
+
+The automation script was copied to `/tmp` and executed under the PostgreSQL operating-system account.
+
+```bash
+sudo cp securityops_automation.py /tmp/securityops_automation.py
+sudo chmod 644 /tmp/securityops_automation.py
+sudo -u postgres python3 /tmp/securityops_automation.py
+```
+
+This allowed the script to execute with the required PostgreSQL access while maintaining controlled file permissions.
+
+This demonstrated the importance of understanding:
+
+- Linux file permissions
+- User execution context
+- Database authentication
+- Application access requirements
+
+---
+
+## Database State Reset During Testing
+
+During repeated automation testing, incident statuses were returned to:
+
+```text
+Investigated
+```
+
+before rerunning the automation.
+
+This created a known starting condition:
+
+```text
+Investigated
+     |
+     +---- High ----> Escalated
+     |
+     +---- Medium --> Reviewed
+```
+
+Testing automation from a known baseline made it easier to determine whether the script produced the expected results.
+
+---
+
+# Validation Methodology
+
+Phase 8 reinforced the importance of validating automation at multiple layers.
+
+```text
+Python Source Code
+       |
+       v
+Syntax Validation
+       |
+       v
+Script Execution
+       |
+       v
+Console Output
+       |
+       v
+Incident Table
+       |
+       v
+Automation Log
+       |
+       v
+Final Database Query
+```
+
+A successful automation should not be considered validated simply because the script finishes without an error.
+
+Validation confirmed:
+
+1. The script executed.
+2. The expected records were processed.
+3. The correct decisions were made.
+4. The intended database records changed.
+5. Audit records were generated.
+6. The final database state matched the expected result.
+
+---
+
+# Lessons Learned
+
+Phase 8 demonstrated several important security-automation principles:
+
+- SQL databases can provide structured storage for security operations data.
+- Python can retrieve and process security incidents directly from PostgreSQL.
+- Incident severity can drive automated response decisions.
+- High-severity incidents can be automatically escalated for analyst attention.
+- Medium-severity incidents can be automatically routed for standard review.
+- Automated actions should create an audit trail.
+- Database changes should always be independently verified.
+- Successful Python compilation proves syntax validity but not logical correctness.
+- Python indentation can significantly alter automation behavior.
+- Database schemas should be verified before writing queries.
+- PostgreSQL error messages can assist with troubleshooting incorrect queries.
+- Automation should be tested from a known initial state.
+- Security automation should be deterministic and auditable.
+- Automation should assist analysts rather than eliminate human investigation.
+- High-risk response actions should remain subject to appropriate analyst review.
+- End-to-end validation is required before trusting automated security workflows.
+
+> **Key Lesson:** Automation is only valuable when its actions can be verified and audited.
+
+---
+
+# Skills Demonstrated
+
+Phase 8 provided hands-on experience with:
+
+- Python
+- PostgreSQL
+- SQL
+- Security automation
+- SOC automation
+- Incident triage
+- Severity-based decision logic
+- Database connectivity
+- Database queries
+- SQL UPDATE operations
+- SQL INSERT operations
+- Python conditional logic
+- Python loops
+- PostgreSQL audit logging
+- Linux permissions
+- Linux execution contexts
+- Script debugging
+- Database troubleshooting
+- Automation validation
+- Incident-response workflows
+- Security reporting
+- Security operations engineering
+
+---
+
+# Phase 8 Evidence Summary
+
+| Snapshot | Evidence | Screenshot |
+|---|---|---|
+| 1 | PostgreSQL Incident Records | `phase8-postgresql-incident-records.png` |
+| 2 | SecurityOpsDB Incident Query | `phase8-securityops-incident-query.png` |
+| 3 | Python Security Automation | `phase8-python-automation.png` |
+| 4 | Python Automation Processing | `phase8-python-automation-processing.png` |
+| 5 | Python Automation Audit Log | `phase8-python-automation-audit-log.png` |
+| 6 | Incident Status Automation Verified | `phase8-incident-status-automation-verified.png` |
+| 7 | Python PostgreSQL Report | `phase8-python-postgresql-report.png` |
+| 8 | End-to-End Automation Validation | `phase8-automation-validation.png` |
+
+---
+
+# Phase 8 Completion Summary
+
+Phase 8 successfully demonstrated a database-driven security automation and response workflow using PostgreSQL and Python.
+
+Security incidents representing SSH brute-force and network reconnaissance activity were stored inside the SecurityOpsDB database.
+
+Python automation retrieved the incident records and evaluated their severity.
+
+The automation applied predefined response logic:
+
+```text
+High Severity
+     |
+     v
+IMMEDIATE REVIEW
+     |
+     v
+Escalated
+
+Medium Severity
+     |
+     v
+STANDARD REVIEW
+     |
+     v
+Reviewed
+```
+
+The script then updated the PostgreSQL incident records and inserted corresponding entries into the automation audit log.
+
+Final database queries confirmed both the automated incident-status changes and the audit records documenting those actions.
+
+The completed Phase 8 workflow demonstrated:
+
+**Store → Query → Analyze → Decide → Update → Audit → Validate**
+
+This phase extends the Enterprise Security Operations Lab beyond security monitoring and investigation by introducing repeatable and auditable security-response automation.
+
+## Phase 8 Status: ✅ COMPLETE
+
+---
+
+# Next Phase
+
+## Phase 9 — Threat Intelligence
+
+The next phase will extend the security operations environment with threat-intelligence and IOC analysis capabilities.
 
 ---
 
@@ -4322,8 +4960,8 @@ All scanning, testing, traffic generation, vulnerability assessment, and securit
 | Phase 5 — Suricata IDS/IPS | ✅ Complete |
 | Phase 6 — Network Security Analysis |✅ Complete |
 | Phase 7 — Vulnerability Management | ✅ Complete |
-| Phase 8 — Security Operations SQL Database | 🔄 Next |
-| Phase 9 — Threat Intelligence | ⏳ Planned |
+| Phase 8 — Security Operations SQL Database | ✅ Complete |
+| Phase 9 — Threat Intelligence | 🔄 Next |
 | Phase 10 — Incident Response | ⏳ Planned |
 | Phase 11 — Digital Forensics | ⏳ Planned |
 | Phase 12 — Web Application Security | ⏳ Planned |
