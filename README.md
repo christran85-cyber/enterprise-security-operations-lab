@@ -4362,54 +4362,1080 @@ The next phase will extend the security operations environment with threat-intel
 
 ---
 
-# Phase 9: Threat Intelligence with MISP
+# Phase 9 — Threat Intelligence & IOC Correlation
 
-## Threat Intelligence
+## Status: ✅ COMPLETE
 
-MISP is used as a phase-specific threat intelligence platform.
+Phase 9 focused on integrating external threat-intelligence data with Python and PostgreSQL to identify malicious Indicators of Compromise (IOCs) and automatically create security incident records.
 
-### IOC Types
+The objective was to demonstrate how raw threat-intelligence data can be transformed into actionable SOC information and correlated with the existing security operations database.
 
-- IP addresses
-- Domains
-- URLs
-- File hashes
-- Threat indicators
-
-## Workflow
+The completed workflow was:
 
 ```text
-Security Event
-      |
-      v
-Indicator Identified
-      |
-      v
-     MISP
-      |
-      v
-IOC Correlation
-      |
-      v
-Investigation
+Threat Intelligence Feed
+        |
+        v
+      IPSum
+        |
+        v
+   Raw IOC Feed
+        |
+        v
+Linux Processing
+        |
+        v
+malicious_ips.txt
+        |
+        v
+Python IOC Lookup
+        |
+   +----+----+
+   |         |
+No Match   IOC Match
+   |         |
+   v         v
+  [OK]    [ALERT]
+             |
+             v
+      PostgreSQL INSERT
+             |
+             v
+       SecurityOpsDB
+             |
+             v
+        SOC Incident
 ```
 
-### Snapshot 1 — MISP Dashboard
+---
 
-![MISP Dashboard](images/phase9-misp.png)
+## Objectives
 
-### Snapshot 2 — IOC
+The objectives of Phase 9 were to:
 
-![MISP IOC](images/phase9-ioc.png)
+- Obtain external threat-intelligence IOC data
+- Process a malicious-IP threat-intelligence feed
+- Extract usable IP indicators from raw threat data
+- Build a local IOC dataset
+- Develop a Python IOC lookup script
+- Accept IP addresses through command-line arguments
+- Validate known malicious indicators
+- Validate non-matching indicators
+- Integrate Python IOC detection with PostgreSQL
+- Automatically create incidents from IOC matches
+- Record threat-intelligence attribution
+- Verify IOC-generated incidents in SecurityOpsDB
+- Demonstrate threat-intelligence enrichment and correlation
+- Troubleshoot PostgreSQL authentication and Linux permissions
+- Create a repeatable threat-intelligence workflow
 
-### Snapshot 3 — IOC Correlation
+---
 
-![MISP Investigation](images/phase9-correlation.png)
+## Systems and Technologies Used
 
-### Outcome
+| Component | Purpose |
+|---|---|
+| SOC-Wazuh | Threat-intelligence processing and database host |
+| IPSum | External malicious-IP threat-intelligence feed |
+| Python 3 | IOC lookup and automation |
+| PostgreSQL | Security operations database |
+| SecurityOpsDB | Incident storage and correlation |
+| psycopg2 | Python PostgreSQL connectivity |
+| Linux CLI | IOC processing, testing, and validation |
+| awk | Extract IP indicators from the raw feed |
+| grep | Validate IOC presence |
 
-Threat intelligence is used to enrich and correlate security investigations.
+---
 
+# Step 1 — Threat Intelligence Feed Processing
+
+An IPSum malicious-IP threat-intelligence feed was used as the external IOC source.
+
+The raw feed contained IP addresses along with the number of threat-intelligence blocklists reporting each address.
+
+Example feed data included:
+
+```text
+85.239.149.72
+16.5.0.244
+16.5.0.254
+77.90.185.20
+107.150.97.10
+129.121.128.70
+167.94.146.54
+167.94.146.63
+2.57.121.112
+2.57.122.209
+```
+
+The feed contained more than 100,000 entries.
+
+A clean IOC list was generated from the threat-intelligence feed:
+
+```bash
+awk '!/^#/ && NF {print $1}' ipsum.txt > malicious_ips.txt
+```
+
+### Command Breakdown
+
+- `awk` — processes structured text
+- `!/^#/` — ignores comment lines
+- `NF` — ignores empty lines
+- `{print $1}` — extracts the first field containing the IP address
+- `ipsum.txt` — original threat-intelligence feed
+- `malicious_ips.txt` — cleaned IOC list
+
+The resulting `malicious_ips.txt` file contained only IP addresses that could be consumed directly by the Python IOC lookup script.
+
+---
+
+# Step 2 — IOC Match Validation
+
+Before integrating Python automation, individual indicators were validated directly against the local IOC dataset.
+
+A known IOC was searched using:
+
+```bash
+grep -Fx "85.239.149.72" malicious_ips.txt
+```
+
+The IP address was successfully returned:
+
+```text
+85.239.149.72
+```
+
+The command exit status was checked with:
+
+```bash
+echo $?
+```
+
+A result of:
+
+```text
+0
+```
+
+confirmed that the indicator existed in the IOC dataset.
+
+### Snapshot 1 — IOC Match Validation
+
+![Phase 9 IOC Match Validation](images/phase9-ioc-match-validation.png)
+
+This established that the threat-intelligence dataset had been correctly processed and contained indicators that could be used for automated testing.
+
+---
+
+# Step 3 — Python IOC Lookup Script
+
+A Python script named:
+
+```text
+ioc_lookup.py
+```
+
+was created to automate IOC searches.
+
+The script loaded the malicious-IP dataset:
+
+```python
+from pathlib import Path
+import sys
+
+IOC_FILE = Path("malicious_ips.txt")
+
+with IOC_FILE.open("r") as file:
+    malicious_ips = {line.strip() for line in file if line.strip()}
+```
+
+Using a Python `set` allowed efficient membership checks against the IOC collection.
+
+The script accepted an IP address and checked whether it existed in the threat-intelligence dataset.
+
+The core detection logic was:
+
+```python
+if test_ip in malicious_ips:
+    print(f"[ALERT] Malicious IOC detected: {test_ip}")
+else:
+    print(f"[OK] IOC not found: {test_ip}")
+```
+
+The resulting detection workflow was:
+
+```text
+IP Address
+     |
+     v
+Python IOC Lookup
+     |
+     v
+malicious_ips.txt
+     |
+ +---+---+
+ |       |
+Match   No Match
+ |       |
+ v       v
+ALERT     OK
+```
+
+---
+
+# Step 4 — Python IOC Command-Line Test
+
+The Python script was configured to accept an IP address through a command-line argument.
+
+The script checked that exactly one IP address had been supplied:
+
+```python
+if len(sys.argv) != 2:
+    print("Usage: python3 ioc_lookup.py <ip_ADDRESS>")
+    sys.exit(1)
+
+test_ip = sys.argv[1]
+```
+
+A known malicious IOC was then tested:
+
+```bash
+python3 ioc_lookup.py 85.239.149.72
+```
+
+The result was:
+
+```text
+[ALERT] Malicious IOC detected: 85.239.149.72
+```
+
+### Snapshot 2 — Python IOC Command-Line Test
+
+![Phase 9 Python IOC Command-Line Test](images/phase9-python-ioc-command-line-test.png)
+
+This demonstrated that the IOC lookup was no longer dependent on a hard-coded IP address.
+
+An analyst or another security automation process could dynamically supply an indicator for investigation.
+
+---
+
+# Step 5 — Negative IOC Validation
+
+Threat-intelligence detection logic must correctly identify both malicious indicators and indicators that do not exist in the threat-intelligence dataset.
+
+A controlled internal address was tested:
+
+```text
+10.10.10.102
+```
+
+The Python script returned:
+
+```text
+[OK] IOC not found: 10.10.10.102
+```
+
+### Snapshot 3 — Python IOC Negative Test
+
+![Phase 9 Python IOC Negative Test](images/phase9-python-ioc-negative-test.png)
+
+The validation demonstrated two possible outcomes:
+
+```text
+Known Malicious IOC
+85.239.149.72
+        |
+        v
+      ALERT
+
+
+Controlled Internal IP
+10.10.10.102
+        |
+        v
+     NO MATCH
+```
+
+Testing both outcomes was important because successfully triggering an alert alone does not prove that the detection logic can distinguish between matching and non-matching indicators.
+
+---
+
+# Step 6 — PostgreSQL Threat Intelligence Integration
+
+The IOC lookup script was then extended to interact with PostgreSQL.
+
+The Python `psycopg2` library was imported:
+
+```python
+import psycopg2
+```
+
+The script connected to the existing SecurityOpsDB PostgreSQL database:
+
+```python
+conn = psycopg2.connect(
+    dbname="securityops",
+    user="postgres"
+)
+
+cursor = conn.cursor()
+```
+
+When an IOC match occurred, Python generated a new security incident using a parameterized SQL query.
+
+```python
+cursor.execute(
+    """
+    INSERT INTO incident
+    (incident_type, source_ip, severity, incident_status, detected_by, description)
+    VALUES (%s, %s, %s, %s, %s, %s)
+    """,
+    (
+        "Malicious IOC",
+        test_ip,
+        "High",
+        "Open",
+        "IPSum threat Intelligence",
+        "IP address matched the IPSum malicious IP threat intelligence feed"
+    )
+)
+
+conn.commit()
+```
+
+After the transaction was committed, the script displayed:
+
+```text
+[DB] Incident recorded in SecurityOpsDB
+```
+
+The resulting automation workflow became:
+
+```text
+IOC
+ |
+ v
+Python Lookup
+ |
+ v
+Threat Intelligence Match
+ |
+ v
+Parameterized SQL INSERT
+ |
+ v
+SecurityOpsDB
+ |
+ v
+SOC Incident
+```
+
+Using parameterized SQL also avoided constructing the database query directly from user-supplied input.
+
+---
+
+# Step 7 — Automated IOC Database Insert
+
+The known malicious indicator was tested again after PostgreSQL integration.
+
+The script was executed using:
+
+```bash
+cd /tmp && sudo -u postgres python3 ioc_lookup.py 85.239.149.72
+```
+
+The script successfully produced:
+
+```text
+[ALERT] Malicious IOC detected: 85.239.149.72
+[DB] Incident recorded in SecurityOpsDB
+```
+
+### Snapshot 4 — IOC Automated Database Insert
+
+![Phase 9 IOC Automated Database Insert](images/phase9-ioc-automated-database-insert.png)
+
+This demonstrated that a threat-intelligence match could automatically transition from detection into structured incident creation.
+
+The workflow had progressed from:
+
+```text
+IOC Match
+    |
+    v
+ [ALERT]
+```
+
+to:
+
+```text
+IOC Match
+    |
+    v
+ [ALERT]
+    |
+    v
+Database INSERT
+    |
+    v
+SOC Incident
+```
+
+The automation no longer stopped after displaying an alert.
+
+The detection was now persisted for later investigation and correlation.
+
+---
+
+# Step 8 — Threat Intelligence Database Verification
+
+PostgreSQL was queried to verify that IOC-generated incidents existed in SecurityOpsDB.
+
+The incident table contained fields including:
+
+```text
+incident_id
+incident_type
+source_ip
+destination_ip
+severity
+incident_status
+detected_by
+description
+detected_at
+```
+
+The database contained the newly generated malicious IOC incident:
+
+```text
+Incident Type:   Malicious IOC
+Source IP:       85.239.149.72
+Severity:        High
+Status:          Open
+Detected By:     IPSum threat Intelligence
+```
+
+The database also retained security incidents created during previous phases, including:
+
+```text
+Network Reconnaissance
+SSH Brute Force
+```
+
+### Snapshot 5 — Threat Intelligence Database Verification
+
+![Phase 9 Threat Intelligence Database Verification](images/phase9-threat-intel-database-verification.png)
+
+This demonstrated that threat-intelligence detections could be incorporated into the same SecurityOpsDB environment used by the existing SOC automation workflow.
+
+SecurityOpsDB could therefore contain incidents originating from multiple security sources:
+
+```text
+Wazuh
+   |
+   +------ SSH Brute Force
+   |
+Suricata
+   |
+   +------ Network Reconnaissance
+   |
+IPSum + Python
+   |
+   +------ Malicious IOC
+   |
+   v
+SecurityOpsDB
+```
+
+---
+
+# Step 9 — Automated IOC Database Verification
+
+The complete Python-to-PostgreSQL workflow was tested end-to-end.
+
+The Python script detected:
+
+```text
+85.239.149.72
+```
+
+as a malicious IOC.
+
+The script automatically inserted a corresponding incident into PostgreSQL.
+
+A final database query was then performed:
+
+```bash
+sudo -u postgres psql -d securityops -c "SELECT incident_id, incident_type, source_ip, severity, incident_status, detected_by, detected_at FROM incident ORDER BY incident_id DESC LIMIT 5;"
+```
+
+The resulting records showed the automated IOC-generated incidents alongside the existing SOC incidents.
+
+### Snapshot 6 — Automated IOC Database Verification
+
+![Phase 9 Automated IOC Database Verification](images/phase9-automated-ioc-database-verification.png)
+
+The final validated workflow was:
+
+```text
+External Threat Intelligence
+          |
+          v
+        IPSum
+          |
+          v
+      ipsum.txt
+          |
+          v
+    Linux Processing
+          |
+          v
+  malicious_ips.txt
+          |
+          v
+   Python IOC Lookup
+          |
+          v
+      IOC Match
+          |
+          v
+       ALERT
+          |
+          v
+   PostgreSQL INSERT
+          |
+          v
+    SecurityOpsDB
+          |
+          v
+    Incident Record
+          |
+          v
+ Database Verification
+```
+
+---
+
+# Phase 9 Threat Intelligence Architecture
+
+Phase 9 extended the Enterprise Security Operations Lab by introducing external threat-intelligence enrichment into the existing SOC data pipeline.
+
+```text
+                 External
+            Threat Intelligence
+                   |
+                 IPSum
+                   |
+                   v
+              ipsum.txt
+                   |
+                   v
+           Linux Processing
+                   |
+                   v
+          malicious_ips.txt
+                   |
+                   v
+           Python IOC Lookup
+                   |
+             +-----+-----+
+             |           |
+          No Match    IOC Match
+             |           |
+             v           v
+            [OK]       [ALERT]
+                         |
+                         v
+                  PostgreSQL
+                         |
+                         v
+                  SecurityOpsDB
+                         |
+                         v
+                   SOC Incident
+                         |
+                         v
+                  Investigation
+```
+
+This architecture adds threat intelligence as another source of security context alongside endpoint and network detections.
+
+---
+
+# Troubleshooting and Lessons Learned
+
+Phase 9 included several troubleshooting scenarios involving Python, PostgreSQL, Linux permissions, database authentication, SQL syntax, and schema validation.
+
+These issues were important because they demonstrated that security automation depends on multiple systems working together correctly.
+
+---
+
+## Troubleshooting 1 — PostgreSQL Peer Authentication
+
+Running the Python script directly as the normal Linux user initially resulted in:
+
+```text
+FATAL: Peer authentication failed for user "postgres"
+```
+
+The Python application attempted to connect using:
+
+```python
+dbname="securityops"
+user="postgres"
+```
+
+However, PostgreSQL's local authentication configuration expected the operating-system execution context to match the PostgreSQL account.
+
+The script was therefore tested using:
+
+```bash
+sudo -u postgres python3 ioc_lookup.py 85.239.149.72
+```
+
+### Lesson Learned
+
+Database connectivity depends on more than correct Python code.
+
+Authentication may depend on:
+
+- PostgreSQL configuration
+- Database username
+- Linux execution context
+- Authentication method
+- File permissions
+- Working directory
+
+A Python application can be logically correct while still failing because the database rejects its authentication context.
+
+---
+
+## Troubleshooting 2 — Linux File Permissions
+
+Executing the Python script as the PostgreSQL operating-system user produced another issue:
+
+```text
+Permission denied
+```
+
+The `postgres` account could not access the script through the original directory path.
+
+The required files were copied to `/tmp`:
+
+```bash
+sudo cp ioc_lookup.py malicious_ips.txt /tmp/
+```
+
+The files could then be accessed from a location available to the PostgreSQL execution context.
+
+The final working command was:
+
+```bash
+cd /tmp && sudo -u postgres python3 ioc_lookup.py 85.239.149.72
+```
+
+### Lesson Learned
+
+There is an important distinction between:
+
+```text
+Application Permissions
+        vs.
+Operating-System Permissions
+```
+
+A correct security automation script can still fail if the account executing it cannot access:
+
+- The Python script
+- IOC files
+- Configuration files
+- Directories
+- Database sockets
+
+---
+
+## Troubleshooting 3 — PostgreSQL Table and Schema Validation
+
+During database integration, the structure of the `incident` table was reviewed.
+
+The schema contained:
+
+```text
+incident_id
+incident_type
+source_ip
+destination_ip
+severity
+incident_status
+detected_by
+description
+detected_at
+```
+
+The schema was inspected before finalizing the automated SQL operation.
+
+This was necessary because SQL queries must reference the actual database structure.
+
+### Lesson Learned
+
+Before integrating automation with an existing database:
+
+1. Inspect the database schema.
+2. Confirm the table name.
+3. Confirm exact column names.
+4. Identify required and optional fields.
+5. Test the SQL operation.
+6. Integrate the validated query into Python.
+7. Query the database again to verify the result.
+
+---
+
+## Troubleshooting 4 — SQL Query Syntax
+
+During database verification, some SQL commands initially produced syntax errors.
+
+The queries were corrected to explicitly select the required fields from the `incident` table.
+
+The final query used:
+
+```sql
+SELECT
+    incident_id,
+    incident_type,
+    source_ip,
+    severity,
+    incident_status,
+    detected_by,
+    detected_at
+FROM incident
+ORDER BY incident_id DESC
+LIMIT 5;
+```
+
+### Lesson Learned
+
+When troubleshooting SQL:
+
+```text
+Check Table
+    |
+    v
+Check Columns
+    |
+    v
+Simplify Query
+    |
+    v
+Test Query
+    |
+    v
+Add Sorting / Filtering
+    |
+    v
+Verify Results
+```
+
+Starting with the known database schema makes SQL troubleshooting much easier.
+
+---
+
+## Troubleshooting 5 — Positive and Negative IOC Testing
+
+The Python script was tested against both a known malicious IOC and a controlled internal IP.
+
+### Positive Test
+
+```text
+85.239.149.72
+      |
+      v
+Threat Feed Match
+      |
+      v
+ALERT
+```
+
+### Negative Test
+
+```text
+10.10.10.102
+      |
+      v
+No Threat Feed Match
+      |
+      v
+OK
+```
+
+### Lesson Learned
+
+Security detection logic should always be tested in both directions.
+
+Testing only malicious input proves that a detection can trigger.
+
+It does not prove that the detection can correctly reject indicators that are not present in the threat-intelligence dataset.
+
+---
+
+## Troubleshooting 6 — Database Verification
+
+The Python script displayed:
+
+```text
+[DB] Incident recorded in SecurityOpsDB
+```
+
+However, application output alone was not treated as sufficient proof.
+
+The PostgreSQL database was independently queried to verify that the record actually existed.
+
+The validation process followed:
+
+```text
+Python Execution
+       |
+       v
+Console Confirmation
+       |
+       v
+PostgreSQL Query
+       |
+       v
+Incident Record Found
+       |
+       v
+Validated
+```
+
+### Lesson Learned
+
+> Successful automation output should be independently validated against the system the automation modifies.
+
+This is especially important for security automation because a script may report success even when another component fails.
+
+---
+
+# Key Lessons Learned
+
+Phase 9 demonstrated several important threat-intelligence and SOC principles:
+
+- Threat intelligence provides external context for internal security investigations.
+- Raw threat-intelligence feeds often require processing before they can be consumed by security tools.
+- Linux command-line utilities can efficiently process large IOC datasets.
+- Python can automate IOC matching against threat-intelligence datasets.
+- Python sets provide efficient membership testing for IOC collections.
+- Command-line arguments make security scripts reusable.
+- IOC detection should be tested using both matching and non-matching indicators.
+- An IOC match provides security context but should still be investigated.
+- Python can convert threat-intelligence matches into structured SOC incidents.
+- PostgreSQL provides persistent storage for IOC-generated incidents.
+- Wazuh, Suricata, and threat-intelligence incidents can coexist in a common security database.
+- Parameterized SQL queries are preferable to constructing SQL directly from supplied input.
+- Database schemas should be inspected before writing automation against them.
+- PostgreSQL authentication can depend on the Linux execution context.
+- Linux permissions can affect otherwise correct security automation.
+- Console output alone does not prove that a database operation succeeded.
+- Automated actions should be independently verified.
+- Threat intelligence becomes significantly more useful when integrated with existing SOC telemetry and incident records.
+
+> **Key Lesson:** Threat intelligence becomes operationally useful when indicators can be automatically processed, compared, correlated, recorded, and presented to analysts for investigation.
+
+---
+
+# Skills Demonstrated
+
+Phase 9 provided hands-on experience with:
+
+- Threat intelligence
+- Indicators of Compromise
+- IOC analysis
+- Threat-feed processing
+- IPSum
+- Linux text processing
+- `awk`
+- `grep`
+- Python 3
+- Python sets
+- Python command-line arguments
+- IOC lookup automation
+- Positive detection testing
+- Negative detection testing
+- PostgreSQL
+- psycopg2
+- SQL
+- Parameterized queries
+- SQL INSERT operations
+- SQL SELECT operations
+- Database schema analysis
+- Incident creation
+- Security data correlation
+- Linux file permissions
+- PostgreSQL peer authentication
+- Automation troubleshooting
+- Threat-intelligence enrichment
+- SOC workflow integration
+- Security automation validation
+
+---
+
+# Phase 9 Evidence Summary
+
+| Snapshot | Evidence | Screenshot |
+|---|---|---|
+| 1 | IOC Match Validation | `phase9-ioc-match-validation.png` |
+| 2 | Python IOC Command-Line Test | `phase9-python-ioc-command-line-test.png` |
+| 3 | Python IOC Negative Test | `phase9-python-ioc-negative-test.png` |
+| 4 | IOC Automated Database Insert | `phase9-ioc-automated-database-insert.png` |
+| 5 | Threat Intelligence Database Verification | `phase9-threat-intel-database-verification.png` |
+| 6 | Automated IOC Database Verification | `phase9-automated-ioc-database-verification.png` |
+
+---
+
+# Phase 9 Evidence Gallery
+
+## Snapshot 1 — IOC Match Validation
+
+![Phase 9 IOC Match Validation](images/phase9-ioc-match-validation.png)
+
+---
+
+## Snapshot 2 — Python IOC Command-Line Test
+
+![Phase 9 Python IOC Command-Line Test](images/phase9-python-ioc-command-line-test.png)
+
+---
+
+## Snapshot 3 — Python IOC Negative Test
+
+![Phase 9 Python IOC Negative Test](images/phase9-python-ioc-negative-test.png)
+
+---
+
+## Snapshot 4 — IOC Automated Database Insert
+
+![Phase 9 IOC Automated Database Insert](images/phase9-ioc-automated-database-insert.png)
+
+---
+
+## Snapshot 5 — Threat Intelligence Database Verification
+
+![Phase 9 Threat Intelligence Database Verification](images/phase9-threat-intel-database-verification.png)
+
+---
+
+## Snapshot 6 — Automated IOC Database Verification
+
+![Phase 9 Automated IOC Database Verification](images/phase9-automated-ioc-database-verification.png)
+
+---
+
+# Phase 9 Completion Summary
+
+Phase 9 successfully demonstrated an integrated threat-intelligence and IOC-correlation workflow.
+
+An external IPSum threat-intelligence feed was processed into a local dataset containing malicious IP indicators.
+
+Python was then used to compare supplied IP addresses against the IOC dataset.
+
+Positive and negative tests confirmed that the script could distinguish between:
+
+```text
+Known IOC
+    |
+    v
+  ALERT
+```
+
+and:
+
+```text
+No IOC Match
+      |
+      v
+     OK
+```
+
+The Python script was then integrated with PostgreSQL.
+
+When the known malicious indicator:
+
+```text
+85.239.149.72
+```
+
+was detected, Python automatically created a high-severity `Malicious IOC` incident inside SecurityOpsDB.
+
+PostgreSQL queries independently verified that the incident had been recorded.
+
+Phase 9 therefore demonstrated the complete threat-intelligence workflow:
+
+```text
+COLLECT
+   |
+   v
+PROCESS
+   |
+   v
+SEARCH
+   |
+   v
+DETECT
+   |
+   v
+CORRELATE
+   |
+   v
+RECORD
+   |
+   v
+VALIDATE
+```
+
+The Enterprise Security Operations Lab now combines:
+
+```text
+Wazuh Endpoint Detection
+          +
+Suricata Network Detection
+          +
+External Threat Intelligence
+          +
+Python Security Automation
+          +
+PostgreSQL SecurityOpsDB
+          |
+          v
+Integrated SOC Workflow
+```
+
+Phase 9 moved the lab beyond basic IOC lookup by connecting external threat intelligence to an automated incident-management workflow.
+
+## Phase 9 Status: ✅ COMPLETE
+
+---
+
+# GitHub Evidence Files
+
+The following Phase 9 screenshots are stored in the repository:
+
+```text
+images/phase9-ioc-match-validation.png
+images/phase9-python-ioc-command-line-test.png
+images/phase9-python-ioc-negative-test.png
+images/phase9-ioc-automated-database-insert.png
+images/phase9-threat-intel-database-verification.png
+images/phase9-automated-ioc-database-verification.png
+```
+
+---
+
+# Next Phase
+
+## Phase 10 — Incident Response & Case Management
+
+Phase 10 will build on the endpoint detections, network detections, threat-intelligence data, Python automation, and SecurityOpsDB incidents created throughout the previous phases.
+
+The next objective is to organize those detections into a structured incident-response investigation and demonstrate how a SOC analyst moves from detection and enrichment into investigation, documentation, and response.
 ---
 
 # Phase 10: Incident Response with DFIR-IRIS
@@ -4961,8 +5987,8 @@ All scanning, testing, traffic generation, vulnerability assessment, and securit
 | Phase 6 — Network Security Analysis |✅ Complete |
 | Phase 7 — Vulnerability Management | ✅ Complete |
 | Phase 8 — Security Operations SQL Database | ✅ Complete |
-| Phase 9 — Threat Intelligence | 🔄 Next |
-| Phase 10 — Incident Response | ⏳ Planned |
+| Phase 9 — Threat Intelligence | ✅ Complete |
+| Phase 10 — Incident Response | 🔄 Next |
 | Phase 11 — Digital Forensics | ⏳ Planned |
 | Phase 12 — Web Application Security | ⏳ Planned |
 | Phase 13 — Python Security Automation | ⏳ Planned |
