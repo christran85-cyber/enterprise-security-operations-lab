@@ -5438,64 +5438,746 @@ Phase 10 will build on the endpoint detections, network detections, threat-intel
 The next objective is to organize those detections into a structured incident-response investigation and demonstrate how a SOC analyst moves from detection and enrichment into investigation, documentation, and response.
 ---
 
-# Phase 10: Incident Response with DFIR-IRIS
+# Phase 10 — Centralized Network Security Logging & Correlation
 
-## Incident Case Management
+## Objective
 
-DFIR-IRIS is used during the incident-response phase.
+The objective of Phase 10 was to extend the Enterprise Security Operations Lab by centralizing network security telemetry from OPNsense into Wazuh and validating that activity generated from the Kali analyst system could be traced across the environment.
 
-### Case Information
+This phase focused on connecting multiple layers of security visibility:
 
-- Incident description
-- Severity
-- Affected systems
-- IOCs
-- Evidence
-- Investigation notes
-- Timeline
-- Containment
-- Remediation
-- Resolution
+- OPNsense firewall telemetry
+- Suricata IDS telemetry
+- Wazuh centralized logging
+- Kali-generated reconnaissance
+- Ubuntu DMZ target activity
 
-## Incident Lifecycle
+The goal was not simply to generate alerts, but to verify the complete telemetry path from network activity to centralized security analysis.
+
+---
+
+## Environment
+
+| System | Role | IP Address |
+|---|---|---|
+| SOC-OPNsense | Firewall / Suricata IDS / Syslog Source | `10.10.10.1` |
+| SOC-Wazuh | SIEM / Centralized Log Collection | `10.10.10.102` |
+| SOC-Kali | Analyst / Controlled Traffic Generator | `10.10.10.103` |
+| SOC-Ubuntu | DMZ Target | `10.50.20.100` |
+
+The traffic path investigated during this phase was:
 
 ```text
-Detection
-   |
-   v
-Analysis
-   |
-   v
-Investigation
-   |
-   v
-Containment
-   |
-   v
-Eradication
-   |
-   v
-Recovery
-   |
-   v
-Lessons Learned
+SOC-Kali
+10.10.10.103
+     |
+     | Controlled Reconnaissance
+     v
+SOC-OPNsense
+Firewall + Suricata IDS
+10.10.10.1
+     |
+     | Remote Syslog UDP/514
+     v
+SOC-Wazuh
+10.10.10.102
+     |
+     v
+Centralized Security Analysis
 ```
 
-### Snapshot 1 — DFIR-IRIS Dashboard
+---
 
-![DFIR-IRIS](images/phase10-dfir.png)
+# 1. Configure Wazuh Remote Syslog Collection
 
-### Snapshot 2 — Incident Case
+Wazuh was configured to accept remote syslog messages from OPNsense.
 
-![Incident Case](images/phase10-case.png)
+The Wazuh configuration contained a remote syslog listener similar to:
 
-### Snapshot 3 — Timeline
+```xml
+<remote>
+  <connection>syslog</connection>
+  <port>514</port>
+  <protocol>udp</protocol>
+  <allowed-ips>10.10.10.1</allowed-ips>
+</remote>
+```
 
-![Incident Timeline](images/phase10-timeline.png)
+This configuration restricts the remote syslog source to the OPNsense firewall at:
 
-### Outcome
+```text
+10.10.10.1
+```
 
-Security investigations are documented and managed as structured incident-response cases.
+The Wazuh configuration was validated before restarting the manager.
+
+```bash
+sudo /var/ossec/bin/wazuh-analysisd -t
+```
+
+Wazuh was then restarted so the configuration could take effect.
+
+```bash
+sudo systemctl restart wazuh-manager
+```
+
+---
+
+# 2. Validate the Wazuh Syslog Listener
+
+The next step was to confirm that Wazuh was actually listening for incoming syslog traffic.
+
+The listener was checked with:
+
+```bash
+sudo ss -lunp | grep ':514'
+```
+
+The output confirmed that `wazuh-remoted` was listening on:
+
+```text
+0.0.0.0:514
+```
+
+This verified that Wazuh was ready to receive UDP syslog messages.
+
+---
+
+# 3. Verify OPNsense Syslog Traffic Reaching Wazuh
+
+A packet capture was performed directly on the Wazuh server.
+
+```bash
+sudo tcpdump -ni any port 514
+```
+
+The capture showed repeated packets from:
+
+```text
+10.10.10.1
+```
+
+to:
+
+```text
+10.10.10.102:514
+```
+
+with the traffic identified as SYSLOG.
+
+Example traffic path:
+
+```text
+10.10.10.1:60578
+        |
+        | UDP SYSLOG
+        v
+10.10.10.102:514
+```
+
+This was an important validation step because it proved at the network layer that OPNsense was actively transmitting logs to Wazuh.
+
+### Evidence
+
+![Wazuh Syslog Listener](images/phase10-wazuh-syslog-listener.png)
+
+The screenshot confirms both the UDP/514 listener and incoming OPNsense syslog traffic.
+
+---
+
+# 4. Enable Wazuh Event Archiving
+
+During validation, incoming packets were visible with `tcpdump`, but the events initially did not appear when monitoring the Wazuh archive.
+
+The Wazuh global configuration was checked:
+
+```bash
+sudo grep -E 'logall|logall_json' /var/ossec/etc/ossec.conf
+```
+
+The configuration initially showed:
+
+```xml
+<logall>no</logall>
+<logall_json>no</logall_json>
+```
+
+To retain the incoming events for investigation, event archiving was enabled:
+
+```xml
+<logall>yes</logall>
+<logall_json>yes</logall_json>
+```
+
+The configuration was then validated and Wazuh restarted.
+
+```bash
+sudo /var/ossec/bin/wazuh-analysisd -t
+sudo systemctl restart wazuh-manager
+```
+
+After the restart, the archive directory contained:
+
+```text
+archives.log
+archives.json
+```
+
+This allowed raw events received by Wazuh to be reviewed during the investigation.
+
+---
+
+# 5. Validate OPNsense Events Inside Wazuh
+
+The Wazuh archive was monitored using:
+
+```bash
+sudo tail -f /var/ossec/logs/archives/archives.log
+```
+
+OPNsense firewall events began appearing in the archive.
+
+JSON-formatted telemetry was then reviewed using:
+
+```bash
+sudo tail -f /var/ossec/logs/archives/archives.json
+```
+
+The records identified the source as:
+
+```text
+OPNsense.internal
+```
+
+and contained decoded firewall information including:
+
+- Protocol
+- Firewall action
+- Source IP
+- Source port
+- Destination IP
+- Destination port
+- Interface
+- Timestamp
+
+### Evidence
+
+![OPNsense Syslog to Wazuh](images/phase10-opnsense-syslog-to-wazuh.png)
+
+This confirmed the centralized logging path:
+
+```text
+OPNsense
+   |
+   | Syslog UDP/514
+   v
+Wazuh
+   |
+   v
+archives.json
+```
+
+---
+
+# 6. Generate Controlled Reconnaissance Traffic
+
+SOC-Kali was used to generate controlled reconnaissance traffic against the Ubuntu DMZ system.
+
+The target was:
+
+```text
+10.50.20.100
+```
+
+A service scan was performed against selected ports:
+
+```bash
+nmap -sS -Pn -p 22,80,443 10.50.20.100
+```
+
+The scan identified:
+
+```text
+22/tcp   open    ssh
+80/tcp   open    http
+443/tcp  closed  https
+```
+
+This traffic was intentionally generated to create a known event that could be followed through the security monitoring pipeline.
+
+The investigation therefore had known endpoints:
+
+```text
+Source:
+10.10.10.103
+SOC-Kali
+
+Destination:
+10.50.20.100
+SOC-Ubuntu
+```
+
+---
+
+# 7. Correlate Kali-to-Ubuntu Traffic in Wazuh
+
+The Wazuh archive was searched for the Ubuntu destination address:
+
+```bash
+sudo grep '"dstip":"10.50.20.100"' /var/ossec/logs/archives/archives.json | tail -20
+```
+
+The resulting records showed traffic containing:
+
+```text
+"srcip":"10.10.10.103"
+```
+
+and:
+
+```text
+"dstip":"10.50.20.100"
+```
+
+The records also identified destination ports associated with the controlled scan, including:
+
+```text
+22
+80
+443
+```
+
+This provided centralized evidence that the Kali reconnaissance traffic crossed OPNsense and was recorded by Wazuh.
+
+The correlation path was now:
+
+```text
+Kali
+10.10.10.103
+     |
+     | Nmap
+     v
+OPNsense
+Firewall Telemetry
+     |
+     | UDP/514
+     v
+Wazuh
+archives.json
+     |
+     v
+Source/Destination Correlation
+```
+
+---
+
+# 8. Locate Suricata EVE JSON Telemetry
+
+The next part of the investigation examined the IDS telemetry produced by Suricata.
+
+From the OPNsense shell, the EVE JSON file was located using:
+
+```bash
+find /var/log -name "eve.json"
+```
+
+The result identified:
+
+```text
+/var/log/suricata/eve.json
+```
+
+Additional Suricata logs were identified using:
+
+```bash
+find /var/log -iname "*suricata*"
+```
+
+This confirmed the location of the raw IDS telemetry used by OPNsense.
+
+### Evidence
+
+![Suricata EVE Log Location](images/phase10-suricata-eve-log-location.png)
+
+---
+
+# 9. Review Raw Suricata EVE JSON
+
+The Suricata EVE JSON telemetry was reviewed directly from OPNsense.
+
+The raw JSON contained security event fields including:
+
+```text
+src_ip
+dest_ip
+src_port
+dest_port
+proto
+event_type
+alert.signature
+alert.category
+alert.severity
+```
+
+The events showed activity involving:
+
+```text
+Source:
+10.10.10.103
+
+Destination:
+10.50.20.100
+```
+
+The raw telemetry also contained IDS alert information associated with the controlled Kali-to-Ubuntu activity.
+
+### Evidence
+
+![Suricata EVE JSON Alert](images/phase10-suricata-eve-json-alert.png)
+
+Reviewing EVE JSON directly was valuable because it demonstrated the ability to investigate raw IDS telemetry rather than relying exclusively on a graphical dashboard.
+
+---
+
+# 10. Validate Suricata Detection
+
+The OPNsense Intrusion Detection interface was used to confirm that Suricata detected the controlled reconnaissance.
+
+The alert interface showed traffic from:
+
+```text
+10.10.10.103
+```
+
+toward:
+
+```text
+10.50.20.100
+```
+
+Observed detections included:
+
+```text
+Internal Recon - Kali to Ubuntu
+```
+
+```text
+Kali to Ubuntu Http Detection
+```
+
+and:
+
+```text
+ET SCAN Possible Nmap User-Agent Observed
+```
+
+The detections confirmed that the same activity visible in the OPNsense firewall telemetry and Wazuh archives was also being identified by the IDS layer.
+
+### Evidence
+
+![Suricata Nmap Detection](images/phase10-suricata-nmap-detection.png)
+
+---
+
+# 11. Cross-Source Event Correlation
+
+At this stage, the same controlled activity could be traced across multiple security data sources.
+
+### Kali
+
+Generated the controlled reconnaissance:
+
+```text
+10.10.10.103
+        |
+        v
+10.50.20.100
+```
+
+### OPNsense Firewall
+
+Recorded the network connection and forwarded firewall telemetry to Wazuh.
+
+### Suricata
+
+Analyzed the traffic and generated IDS detections.
+
+### Wazuh
+
+Received and archived OPNsense telemetry for centralized investigation.
+
+The final correlation path was:
+
+```text
+                 CONTROLLED ACTIVITY
+                         |
+                         v
+                 +----------------+
+                 |    SOC-Kali    |
+                 |  10.10.10.103  |
+                 +-------+--------+
+                         |
+                    Nmap / HTTP
+                         |
+                         v
+                +------------------+
+                |   SOC-OPNsense   |
+                | Firewall + IDS   |
+                +----+--------+----+
+                     |        |
+              Firewall Logs   | Suricata
+                     |        | Alerts
+                     v        v
+                 +----------------+
+                 |   SOC-Wazuh    |
+                 | 10.10.10.102   |
+                 +-------+--------+
+                         |
+                         v
+                 Centralized Event
+                    Correlation
+                         |
+                         v
+                 +----------------+
+                 |   SOC-Ubuntu   |
+                 | 10.50.20.100   |
+                 +----------------+
+```
+
+This demonstrated layered security visibility rather than relying on a single monitoring product.
+
+---
+
+# Troubleshooting
+
+Several troubleshooting steps were required during Phase 10.
+
+## Incorrect tcpdump Command
+
+An initial attempt used:
+
+```bash
+sudo tcp dump -ni any port 514
+```
+
+which returned:
+
+```text
+sudo: 'tcp': command not found
+```
+
+The correct command was:
+
+```bash
+sudo tcpdump -ni any port 514
+```
+
+This reinforced the importance of carefully validating command syntax during troubleshooting.
+
+---
+
+## Syslog Packets Arrived but Archive Initially Appeared Empty
+
+Packet capture confirmed that Wazuh was receiving traffic:
+
+```text
+10.10.10.1 -> 10.10.10.102:514
+```
+
+but monitoring the archive initially produced no visible events.
+
+The configuration was checked:
+
+```bash
+sudo grep -E 'logall|logall_json' /var/ossec/etc/ossec.conf
+```
+
+which showed event archiving disabled.
+
+Enabling:
+
+```xml
+<logall>yes</logall>
+<logall_json>yes</logall_json>
+```
+
+allowed the events to be retained for investigation.
+
+This demonstrated an important distinction:
+
+> Network traffic reaching the SIEM does not automatically mean that the expected events are being retained in the location being investigated.
+
+---
+
+## Incorrect Wazuh Archive Path
+
+An initial command attempted to read:
+
+```text
+/var/ossec/logs/archives.json
+```
+
+which returned:
+
+```text
+No such file or directory
+```
+
+The archive directory was inspected:
+
+```bash
+sudo ls -lh /var/ossec/logs/archives/
+```
+
+The correct path was identified as:
+
+```text
+/var/ossec/logs/archives/archives.json
+```
+
+Using the correct path successfully returned the archived events.
+
+This was an important troubleshooting lesson because verifying filesystem structure is more reliable than assuming a log location.
+
+---
+
+# Lessons Learned
+
+Phase 10 demonstrated that successful centralized security monitoring requires validation at multiple layers.
+
+A listening service alone does not prove that telemetry is arriving.
+
+Incoming packets alone do not prove that events are being archived.
+
+Archived firewall logs alone do not prove that the IDS detected the activity.
+
+Instead, each layer should be independently verified:
+
+```text
+1. Is the service listening?
+            |
+            v
+2. Are packets reaching the server?
+            |
+            v
+3. Are events being stored?
+            |
+            v
+4. Can the event be searched?
+            |
+            v
+5. Did the IDS detect the activity?
+            |
+            v
+6. Can the analyst correlate the sources?
+```
+
+The phase also reinforced the difference between **firewall telemetry** and **IDS telemetry**.
+
+OPNsense firewall logs showed that network connections occurred.
+
+Suricata provided security context by identifying the activity as reconnaissance or suspicious scanning behavior.
+
+Wazuh provided centralized storage and investigation capability.
+
+Together, these technologies provided substantially greater visibility than any single data source alone.
+
+---
+
+# Evidence Gallery
+
+## Wazuh Syslog Listener
+
+![Wazuh Syslog Listener](images/phase10-wazuh-syslog-listener.png)
+
+Wazuh listening on UDP/514 while OPNsense actively sends syslog traffic.
+
+---
+
+## OPNsense Telemetry in Wazuh
+
+![OPNsense Syslog to Wazuh](images/phase10-opnsense-syslog-to-wazuh.png)
+
+OPNsense firewall events stored and searchable inside the Wazuh JSON archive.
+
+---
+
+## Suricata EVE JSON Location
+
+![Suricata EVE Log Location](images/phase10-suricata-eve-log-location.png)
+
+Verification of the raw Suricata EVE JSON telemetry location.
+
+---
+
+## Raw Suricata IDS Telemetry
+
+![Suricata EVE JSON Alert](images/phase10-suricata-eve-json-alert.png)
+
+Raw EVE JSON showing IDS telemetry associated with Kali-to-Ubuntu traffic.
+
+---
+
+## Suricata Reconnaissance Detection
+
+![Suricata Nmap Detection](images/phase10-suricata-nmap-detection.png)
+
+Suricata detecting the controlled Kali reconnaissance against the Ubuntu DMZ target.
+
+---
+
+## Supporting Cross-Phase Correlation Evidence
+
+![OPNsense Wazuh Kali Ubuntu Correlation](images/phase9-opnsense-wazuh-kali-ubuntu-correlation.png)
+
+Supporting Phase 9 evidence showing the broader OPNsense, Wazuh, Kali, and Ubuntu correlation workflow.
+
+---
+
+# Phase 10 Results
+
+Phase 10 successfully demonstrated centralized network security logging and multi-source event correlation.
+
+The following capabilities were validated:
+
+- Wazuh listening for remote syslog on UDP/514
+- OPNsense transmitting firewall telemetry to Wazuh
+- Packet-level validation of the syslog pipeline
+- Wazuh raw event archiving
+- OPNsense firewall events searchable inside Wazuh
+- Controlled Kali reconnaissance against the Ubuntu DMZ
+- Source and destination IP correlation
+- Suricata EVE JSON investigation
+- Suricata reconnaissance detection
+- Correlation between firewall, IDS, and SIEM telemetry
+- Troubleshooting of logging, configuration, and filesystem issues
+
+The completed workflow was:
+
+```text
+Kali Reconnaissance
+        |
+        v
+OPNsense Firewall
+        |
+        +-------------------+
+        |                   |
+        v                   v
+Firewall Telemetry      Suricata IDS
+        |                   |
+        v                   v
+Wazuh Archives        IDS Detection
+        |                   |
+        +---------+---------+
+                  |
+                  v
+        Security Investigation
+           and Correlation
+```
+
+Phase 10 established a centralized network-monitoring pipeline capable of tracing controlled activity from the originating host through the firewall and IDS layers into the SIEM for investigation.
+
+**Phase 10 Status: COMPLETE**
 
 ---
 
