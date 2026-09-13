@@ -6181,58 +6181,783 @@ Phase 10 established a centralized network-monitoring pipeline capable of tracin
 
 ---
 
-# Phase 11: Digital Forensics and File Analysis
+# Phase 11 — Incident Response & Case Management with DFIR-IRIS
 
-## YARA
+## Objective
 
-YARA rules are created to identify suspicious controlled test files.
+The objective of Phase 11 was to extend the Enterprise Security Operations Lab from security-event detection and correlation into a structured **Incident Response (IR) and Case Management workflow**.
 
-### Snapshot 1 — YARA Rule
+During previous phases, the lab successfully generated, detected, and correlated controlled reconnaissance activity. In Phase 11, that activity was converted into a formal incident investigation using **DFIR-IRIS**.
 
-![YARA Rule](images/phase11-yara-rule.png)
+The complete workflow demonstrated was:
 
-### Snapshot 2 — YARA Detection
+```text
+SOC-Kali
+    ↓
+OPNsense / Suricata
+    ↓
+Wazuh SIEM
+    ↓
+DFIR-IRIS
+    ↓
+Incident Investigation
+    ↓
+Case Closure
+```
 
-![YARA Detection](images/phase11-yara-detection.png)
+Phase 11 focused on:
+
+- Deploying DFIR-IRIS
+- Creating an incident case
+- Identifying affected assets
+- Registering Indicators of Compromise (IOCs)
+- Registering security evidence
+- Correlating Suricata and Wazuh/OPNsense telemetry
+- Building an incident timeline
+- Documenting investigation findings
+- Performing containment, remediation, and recovery assessments
+- Tracking analyst investigation tasks
+- Closing the incident
+- Preserving the completed environment with a VirtualBox snapshot
 
 ---
 
-## Volatility 3
+## 1. DFIR-IRIS Deployment
 
-Volatility 3 is used for memory analysis.
+DFIR-IRIS was deployed on **SOC-Kali** using Docker.
 
-### Analysis
+This allowed the Kali analyst workstation to serve as both the security testing system and the incident-response case-management workstation.
 
-- Processes
-- Network connections
-- Memory artifacts
-- Suspicious activity
+Docker was verified with:
 
-### Snapshot 3 — Volatility
+```bash
+sudo systemctl is-active docker
+```
 
-![Volatility](images/phase11-volatility.png)
+The expected result was:
+
+```text
+active
+```
+
+DFIR-IRIS was started from the IRIS deployment directory:
+
+```bash
+cd ~/iris-web
+sudo docker-compose up -d
+```
+
+The running containers were verified with:
+
+```bash
+sudo docker-compose ps
+```
+
+The deployment included the primary DFIR-IRIS application components, including the application server, database, Nginx, RabbitMQ, and worker services.
+
+![DFIR-IRIS Containers Running](images/phase11-dfir-iris-containers-running.png)
 
 ---
 
-## Autopsy
+## 2. DFIR-IRIS Web Interface
 
-Autopsy is used when disk or file-system forensic analysis is required.
+After the containers started successfully, the DFIR-IRIS web application was accessed from SOC-Kali.
 
-### Analysis
+The deployed environment used:
 
-- File systems
-- Deleted files
-- Metadata
-- Timeline information
-- Evidence artifacts
+```text
+DFIR-IRIS v2.4.29
+```
 
-### Snapshot 4 — Autopsy Investigation
+The login interface confirmed that the application was reachable.
 
-![Autopsy Investigation](images/phase11-autopsy.png)
+![DFIR-IRIS Login](images/phase11-dfir-iris-login.png)
 
-### Outcome
+After authentication, the DFIR-IRIS dashboard provided centralized access to incident-response functions including cases, alerts, assets, IOCs, evidence, timelines, notes, and tasks.
 
-Multiple forensic techniques are used to analyze endpoint evidence.
+![DFIR-IRIS Dashboard](images/phase11-dfir-iris-dashboard.png)
+
+---
+
+## 3. Incident Case Creation
+
+A formal incident case was created to investigate the controlled reconnaissance activity previously generated in the security lab.
+
+### Case Name
+
+```text
+Kali-to-Ubuntu Reconnaissance Detection
+```
+
+### SOC Ticket ID
+
+```text
+SOC-2026-001
+```
+
+### Description
+
+```text
+Controlled Kali reconnaissance against SOC-Ubuntu detected and correlated by Suricata, OPNsense, and Wazuh.
+```
+
+![Incident Case Creation](images/phase11-iris-incident-case-creation.png)
+
+DFIR-IRIS successfully created the incident case.
+
+![IRIS Case Created](images/phase11-iris-case-created.png)
+
+---
+
+## 4. Incident Classification
+
+The incident was classified as:
+
+```text
+information-gathering:scanner
+```
+
+The classification represented the reconnaissance/scanning behavior generated during the controlled Nmap test.
+
+The case was also tagged with:
+
+```text
+reconnaissance
+nmap
+suricata
+wazuh
+opnsense
+```
+
+![IRIS Case Classification](images/phase11-iris-case-classification.png)
+
+---
+
+## 5. Incident Case Summary
+
+The investigation focused on controlled reconnaissance originating from:
+
+```text
+SOC-Kali
+10.10.10.103
+```
+
+and targeting:
+
+```text
+SOC-Ubuntu
+10.50.20.100
+```
+
+The controlled Nmap reconnaissance targeted TCP ports:
+
+```text
+22 - SSH
+80 - HTTP
+443 - HTTPS
+```
+
+The purpose of the activity was to validate the lab's ability to detect, correlate, investigate, and document reconnaissance activity across multiple security controls.
+
+![IRIS Case Summary](images/phase11-iris-case-summary.png)
+
+---
+
+## 6. Affected Assets
+
+Four systems involved in the incident were registered as assets in DFIR-IRIS.
+
+| Asset | Role | IP Address |
+|---|---|---|
+| SOC-Kali | Analyst / Reconnaissance Source | 10.10.10.103 |
+| SOC-Ubuntu | Target Linux Server | 10.50.20.100 |
+| SOC-OPNsense | Firewall / Network Security | 10.10.10.1 |
+| SOC-Wazuh | SIEM / XDR Server | 10.10.10.102 |
+
+These assets represented the complete path of the reconnaissance and subsequent investigation.
+
+```text
+SOC-Kali
+    ↓
+SOC-OPNsense / Suricata
+    ↓
+SOC-Ubuntu
+    ↓
+SOC-Wazuh
+    ↓
+DFIR-IRIS
+```
+
+![IRIS Incident Assets](images/phase11-iris-incident-assets.png)
+
+---
+
+## 7. Indicators of Compromise
+
+Network indicators associated with the investigation were registered as IOCs.
+
+### Source IOC
+
+```text
+10.10.10.103
+```
+
+Type:
+
+```text
+ip-src
+```
+
+This address identified **SOC-Kali** as the system generating the controlled reconnaissance.
+
+![IRIS Source IOC](images/phase11-iris-source-ioc.png)
+
+### Destination IOC
+
+```text
+10.50.20.100
+```
+
+Type:
+
+```text
+ip-dst
+```
+
+This address identified **SOC-Ubuntu** as the destination of the reconnaissance activity.
+
+The IOCs were associated with the investigation so that the source and destination could be correlated with assets, evidence, and timeline events.
+
+![IRIS IOC Correlation](images/phase11-iris-ioc-correlation.png)
+
+---
+
+## 8. Suricata IDS Evidence
+
+Suricata detected the controlled reconnaissance traffic generated by SOC-Kali.
+
+Relevant detections included:
+
+```text
+Internal Recon - Kali to Ubuntu
+ET SCAN Possible Nmap User-Agent Observed
+```
+
+These alerts demonstrated that the IDS successfully identified the reconnaissance activity.
+
+The Suricata detection was registered as evidence inside DFIR-IRIS.
+
+![IRIS Suricata Evidence](images/phase11-iris-suricata-evidence.png)
+
+---
+
+## 9. Wazuh and OPNsense Evidence
+
+OPNsense firewall telemetry associated with the reconnaissance was forwarded to the Wazuh SIEM.
+
+Wazuh decoded the OPNsense `filterlog` events using the `pf` decoder.
+
+The decoded telemetry exposed information including:
+
+- Source IP
+- Destination IP
+- Protocol
+- Source port
+- Destination port
+- Firewall action
+
+The Wazuh/OPNsense telemetry was registered as supporting evidence inside the incident case.
+
+![IRIS Incident Evidence](images/phase11-dfir-iris-incident-evidence.png)
+
+This provided multiple independent security data sources for the investigation:
+
+```text
+Suricata IDS
+      \
+       \
+        → DFIR-IRIS Incident
+       /
+      /
+Wazuh / OPNsense
+```
+
+---
+
+## 10. OPNsense → Wazuh Syslog Validation
+
+Before completing the investigation, the centralized logging pipeline was validated.
+
+On SOC-Wazuh, UDP port 514 traffic was monitored with:
+
+```bash
+sudo tcpdump -ni any udp port 514
+```
+
+The packet capture confirmed active syslog traffic:
+
+```text
+10.10.10.1 → 10.10.10.102:514
+```
+
+This demonstrated that OPNsense was successfully transmitting firewall telemetry to Wazuh.
+
+![OPNsense Syslog Validation](images/phase11-opnsense-syslog-validation.png)
+
+The Wazuh archive was also queried:
+
+```bash
+sudo grep '10.10.10.1' /var/ossec/logs/archives/archives.json | tail -5
+```
+
+The returned events contained structured OPNsense firewall telemetry.
+
+Important fields included:
+
+```text
+hostname: OPNsense.internal
+program_name: filterlog
+decoder: pf
+action: pass
+```
+
+This validated the logging pipeline:
+
+```text
+OPNsense
+    ↓
+Syslog UDP/514
+    ↓
+Wazuh
+    ↓
+pf Decoder
+    ↓
+Structured Firewall Events
+```
+
+![OPNsense Wazuh Log Validation](images/phase11-opnsense-wazuh-log-validation.png)
+
+---
+
+## 11. Incident Timeline
+
+A chronological incident timeline was created inside DFIR-IRIS.
+
+The timeline documented three major stages.
+
+### Event 1 — SOC-Kali Initiated Nmap Reconnaissance
+
+SOC-Kali:
+
+```text
+10.10.10.103
+```
+
+initiated controlled Nmap reconnaissance against:
+
+```text
+10.50.20.100
+```
+
+The scan targeted:
+
+```text
+TCP 22
+TCP 80
+TCP 443
+```
+
+The activity was intentionally generated to validate network monitoring, IDS detection, SIEM correlation, and incident-response procedures.
+
+![Nmap Reconnaissance Timeline](images/phase11-iris-timeline-nmap-reconnaissance.png)
+
+### Event 2 — Suricata Detected Nmap Reconnaissance
+
+Suricata detected the controlled reconnaissance traffic originating from SOC-Kali and targeting SOC-Ubuntu.
+
+IDS detections included:
+
+```text
+Internal Recon - Kali to Ubuntu
+ET SCAN Possible Nmap User-Agent Observed
+```
+
+### Event 3 — Wazuh Correlated OPNsense Firewall Telemetry
+
+Wazuh received OPNsense firewall telemetry associated with the controlled reconnaissance.
+
+The firewall events were decoded using the Wazuh `pf` decoder and correlated with the Suricata IDS detections.
+
+The complete timeline demonstrated:
+
+```text
+Nmap Reconnaissance
+        ↓
+Suricata Detection
+        ↓
+OPNsense Firewall Telemetry
+        ↓
+Wazuh SIEM Correlation
+        ↓
+DFIR-IRIS Investigation
+```
+
+![IRIS Incident Timeline](images/phase11-iris-incident-timeline.png)
+
+---
+
+## 12. Investigation Findings
+
+A formal investigation note titled:
+
+```text
+Investigation Findings and Response
+```
+
+was created inside DFIR-IRIS.
+
+The investigation determined that SOC-Kali generated controlled reconnaissance against SOC-Ubuntu.
+
+Suricata successfully detected the reconnaissance.
+
+OPNsense firewall telemetry associated with the activity was forwarded to SOC-Wazuh.
+
+Wazuh decoded the OPNsense `filterlog` events using the `pf` decoder, exposing source IP, destination IP, protocol, and destination-port information.
+
+Correlation between Suricata and Wazuh/OPNsense telemetry confirmed that the same SOC-Kali source generated the reconnaissance activity against SOC-Ubuntu.
+
+![IRIS Investigation Findings](images/phase11-iris-investigation-findings.png)
+
+---
+
+## 13. Containment Assessment
+
+The reconnaissance activity was intentionally generated as part of an authorized security validation inside the isolated lab environment.
+
+Because no unauthorized compromise was identified:
+
+- SOC-Kali was not isolated.
+- No firewall block was applied.
+- SOC-Ubuntu remained operational.
+- Existing monitoring controls remained enabled.
+
+In a production environment, equivalent unauthorized reconnaissance could require:
+
+- Investigation of the source endpoint
+- Host isolation
+- Firewall restrictions
+- Blocking suspicious traffic
+- Credential review
+- Additional endpoint analysis
+- Increased monitoring
+
+This demonstrated that detection does not automatically require containment. Analysts must first determine the context and legitimacy of the activity.
+
+---
+
+## 14. Remediation Assessment
+
+The investigation confirmed that the existing defensive controls were functioning as expected.
+
+The following controls successfully contributed to the investigation:
+
+- Network segmentation
+- OPNsense firewall monitoring
+- Suricata IDS
+- Wazuh centralized logging
+- Wazuh event decoding
+- Security-event correlation
+- DFIR-IRIS case management
+
+No system compromise was identified.
+
+Existing monitoring controls remained enabled, and reconnaissance detection rules can continue to be reviewed and tuned as the lab develops.
+
+---
+
+## 15. Recovery Assessment
+
+No recovery action was required because the reconnaissance activity was intentionally generated and no system was compromised.
+
+SOC-Ubuntu remained operational throughout the test.
+
+Normal network connectivity was maintained following the security validation.
+
+---
+
+## 16. Incident Response Tasks
+
+DFIR-IRIS tasks were used to track the analyst investigation workflow.
+
+Five investigation tasks were completed:
+
+1. **Review Suricata Reconnaissance Detection**
+2. **Correlate Wazuh and OPNsense Firewall Telemetry**
+3. **Validate Incident IOCs**
+4. **Perform Containment Assessment**
+5. **Document Incident Findings and Close Investigation**
+
+All five tasks were assigned to the administrator and marked:
+
+```text
+Done
+```
+
+This demonstrated how a SOC analyst can track individual investigation activities and ensure that required response procedures are completed.
+
+![IRIS Incident Tasks](images/phase11-tasks.png)
+
+---
+
+## 17. Incident Closure
+
+After reviewing the security telemetry, validating the IOCs, documenting the findings, completing the incident-response tasks, and performing containment/remediation/recovery assessments, the incident was formally closed.
+
+The final case state was:
+
+```text
+Closed
+```
+
+The completed DFIR-IRIS case preserved:
+
+- Incident description
+- Incident classification
+- Affected assets
+- IOCs
+- Suricata evidence
+- Wazuh/OPNsense evidence
+- Investigation timeline
+- Investigation findings
+- Containment assessment
+- Remediation assessment
+- Recovery assessment
+- Analyst tasks
+
+![IRIS Case Closed](images/phase11-case-closed.png)
+
+---
+
+## 18. Final Incident Response Architecture
+
+The completed Phase 11 workflow was:
+
+```text
+                  SOC-Kali
+               10.10.10.103
+                     |
+                     | Controlled Nmap
+                     | Reconnaissance
+                     v
+                 OPNsense
+                     |
+            +--------+--------+
+            |                 |
+            v                 v
+        Suricata         Firewall Logs
+            |                 |
+            +--------+--------+
+                     |
+                     v
+                   Wazuh
+                10.10.10.102
+                     |
+              Detection and
+                Correlation
+                     |
+                     v
+                DFIR-IRIS
+                     |
+          +----------+----------+
+          |          |          |
+          v          v          v
+        Assets      IOCs     Evidence
+          |          |          |
+          +----------+----------+
+                     |
+                     v
+                  Timeline
+                     |
+                     v
+                Investigation
+                     |
+                     v
+          Containment Assessment
+                     |
+                     v
+        Remediation / Recovery
+                     |
+                     v
+                 Case Closure
+```
+
+---
+
+## 19. Results
+
+Phase 11 successfully extended the Enterprise Security Operations Lab from security monitoring into a complete incident-response workflow.
+
+Instead of stopping after an IDS or SIEM alert, the detected activity was converted into a structured investigation.
+
+The completed workflow demonstrated:
+
+```text
+Detection
+    ↓
+Validation
+    ↓
+Correlation
+    ↓
+Case Creation
+    ↓
+Asset Identification
+    ↓
+IOC Documentation
+    ↓
+Evidence Registration
+    ↓
+Timeline Reconstruction
+    ↓
+Investigation
+    ↓
+Containment Assessment
+    ↓
+Remediation
+    ↓
+Recovery Assessment
+    ↓
+Case Closure
+```
+
+---
+
+## 20. Lessons Learned
+
+### Detection Is Only the Beginning
+
+An IDS or SIEM alert does not complete the incident-response process.
+
+Security events must be investigated, correlated with additional telemetry, documented, and placed into context before an analyst can determine the appropriate response.
+
+### Multiple Data Sources Improve Investigation Confidence
+
+Suricata provided IDS detection while OPNsense and Wazuh provided supporting firewall telemetry.
+
+Correlating these independent data sources provided stronger evidence than relying on a single alert.
+
+### Case Management Preserves Investigation Context
+
+DFIR-IRIS provided a centralized location for:
+
+- Assets
+- IOCs
+- Evidence
+- Timeline events
+- Investigation notes
+- Analyst tasks
+
+This allowed the entire investigation to be documented in one case-management platform.
+
+### Not Every Detection Requires Containment
+
+The reconnaissance activity was intentionally generated for security validation.
+
+Although the defensive controls correctly detected the activity, containment was unnecessary because the activity was authorized.
+
+This demonstrated an important SOC principle:
+
+> Detection does not automatically mean compromise. Analysts must validate the context before taking response actions.
+
+### Incident Timelines Improve Investigation Clarity
+
+Building a timeline made it possible to reconstruct the incident sequence:
+
+```text
+Reconnaissance
+      ↓
+IDS Detection
+      ↓
+Firewall Telemetry
+      ↓
+SIEM Correlation
+      ↓
+Investigation
+      ↓
+Response Decision
+```
+
+---
+
+## 21. VirtualBox Snapshot
+
+After completing and closing the DFIR-IRIS investigation, a final VirtualBox snapshot was taken of **SOC-Kali**.
+
+SOC-Kali was the primary system modified during Phase 11 because Docker and DFIR-IRIS were deployed on this VM and the completed incident case was stored within the DFIR-IRIS environment.
+
+### Snapshot Name
+
+```text
+Phase 11 Complete - Incident Response and Case Management
+```
+
+### Snapshot Description
+
+```text
+Phase 11 completed.
+
+DFIR-IRIS v2.4.29 deployed and operational on SOC-Kali using Docker.
+
+Created and completed the Kali-to-Ubuntu Reconnaissance Detection incident investigation, including:
+
+- SOC-Kali, SOC-Ubuntu, SOC-OPNsense, and SOC-Wazuh assets
+- Source and destination IOCs
+- Suricata IDS detection evidence
+- Wazuh and OPNsense firewall telemetry correlation
+- Three-event incident timeline
+- Investigation findings and response documentation
+- Containment, remediation, and recovery assessment
+- Five completed incident-response tasks
+- Final incident case closure
+
+This snapshot preserves the completed Phase 11 DFIR-IRIS incident-response and case-management environment.
+```
+
+The snapshot provides a recovery point containing the completed DFIR-IRIS deployment and incident investigation.
+
+---
+
+## Phase 11 Status
+
+### ✅ Phase 11 — Incident Response & Case Management: COMPLETE
+
+### Technologies Used
+
+- DFIR-IRIS v2.4.29
+- Docker
+- Kali Linux
+- OPNsense
+- Suricata IDS
+- Wazuh SIEM/XDR
+- Syslog
+- Nmap
+- VirtualBox
+
+### Skills Demonstrated
+
+- Incident response
+- SOC investigation
+- Case management
+- IOC management
+- Evidence preservation
+- Security-event correlation
+- Timeline reconstruction
+- Network telemetry analysis
+- Containment assessment
+- Remediation assessment
+- Recovery assessment
+- Incident documentation
+- Case closure
+- Docker-based security application deployment
 
 ---
 
@@ -6670,9 +7395,9 @@ All scanning, testing, traffic generation, vulnerability assessment, and securit
 | Phase 7 — Vulnerability Management | ✅ Complete |
 | Phase 8 — Security Operations SQL Database | ✅ Complete |
 | Phase 9 — Threat Intelligence | ✅ Complete |
-| Phase 10 — Incident Response | 🔄 Next |
-| Phase 11 — Digital Forensics | ⏳ Planned |
-| Phase 12 — Web Application Security | ⏳ Planned |
+| Phase 10 — Incident Response |✅ Complete |
+| Phase 11 — Digital Forensics | ✅ Complete |
+| Phase 12 — Web Application Security |  🔄 Next|
 | Phase 13 — Python Security Automation | ⏳ Planned |
 | Phase 14 — Enterprise SOC Investigation | ⏳ Planned |
 
