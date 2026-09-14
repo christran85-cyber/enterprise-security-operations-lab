@@ -6961,38 +6961,686 @@ The snapshot provides a recovery point containing the completed DFIR-IRIS deploy
 
 ---
 
-# Phase 12: Web Application Security
+# Phase 12 — Web Application Security Assessment
 
-## OWASP ZAP
+## Overview
 
-A deliberately vulnerable web application is hosted inside the isolated lab environment.
+Phase 12 introduced controlled web application security testing into the Enterprise Security Operations Lab.
 
-OWASP ZAP is used from Kali to analyze the application.
+A deliberately vulnerable **OWASP Juice Shop** application was deployed as a Docker container on **SOC-Ubuntu**. From **SOC-Kali**, reconnaissance, service enumeration, web technology fingerprinting, and vulnerability enumeration were performed against the application.
 
-### Testing
+The phase also included troubleshooting an unexpected Docker container failure, restoring the application, validating connectivity, documenting security findings, and preserving the completed environment with a VirtualBox snapshot.
 
-- Application discovery
-- Passive scanning
-- Controlled active scanning
-- HTTP analysis
-- Security header analysis
-- Vulnerability identification
+---
 
-### Snapshot 1 — Vulnerable Web Application
+## Objectives
 
-![Vulnerable Web Application](images/phase12-webapp.png)
+The objectives of Phase 12 were to:
 
-### Snapshot 2 — ZAP Scan
+- Deploy OWASP Juice Shop inside the isolated SOC lab
+- Verify the existing Apache web service on SOC-Ubuntu
+- Identify exposed web services using Nmap
+- Fingerprint the Juice Shop application using WhatWeb
+- Perform vulnerability enumeration using Nikto
+- Review HTTP security-header findings
+- Identify potentially sensitive web paths
+- Troubleshoot application availability problems
+- Restore the Juice Shop Docker container after failure
+- Document assessment findings
+- Preserve the completed environment with a VirtualBox snapshot
 
-![OWASP ZAP](images/phase12-zap.png)
+---
 
-### Snapshot 3 — Findings
+## Lab Environment
 
-![ZAP Findings](images/phase12-findings.png)
+| System | IP Address | Role |
+|---|---|---|
+| SOC-Kali | 10.10.10.103 | Security analyst / assessment workstation |
+| SOC-Ubuntu | 10.50.20.100 | Web application target |
+| Apache | 10.50.20.100:80 | Existing web server |
+| OWASP Juice Shop | 10.50.20.100:3000 | Deliberately vulnerable web application |
 
-### Outcome
+### Assessment Tools
 
-Web application security findings are incorporated into the broader security-analysis workflow.
+The following tools were used during the assessment:
+
+- Nmap
+- WhatWeb
+- Nikto
+- Docker
+- curl
+- Apache
+- OWASP Juice Shop
+
+---
+
+# 1. Apache Web Server Validation
+
+Before deploying the vulnerable application, the existing Apache service on SOC-Ubuntu was verified.
+
+Apache service status was checked with:
+
+```bash
+sudo systemctl status apache2
+```
+
+The service returned:
+
+```text
+Active: active (running)
+```
+
+Local HTTP functionality was then tested with:
+
+```bash
+curl -I http://localhost
+```
+
+The server successfully returned:
+
+```text
+HTTP/1.1 200 OK
+Server: Apache
+```
+
+This confirmed that SOC-Ubuntu already had a functioning HTTP service before Juice Shop was introduced.
+
+### Evidence — Apache Validation
+
+![Phase 12 Apache Validation](images/phase12-apache-validation.png)
+
+---
+
+# 2. Initial Service Discovery
+
+From SOC-Kali, Nmap was used to identify the existing web services exposed by SOC-Ubuntu.
+
+```bash
+nmap -sV -p 80,443 10.50.20.100
+```
+
+The scan identified:
+
+```text
+PORT    STATE  SERVICE VERSION
+80/tcp  open   http    Apache httpd
+443/tcp closed https
+```
+
+This established the target's initial web-service exposure before testing the Juice Shop application.
+
+### Evidence — Nmap Service Discovery
+
+![Phase 12 Nmap Service Discovery](images/phase12-nmap-service-discovery.png)
+
+---
+
+# 3. OWASP Juice Shop Deployment
+
+OWASP Juice Shop was selected as the deliberately vulnerable application for the web security assessment.
+
+The Docker image was downloaded to SOC-Ubuntu:
+
+```bash
+sudo docker pull bkimminich/juice-shop
+```
+
+After the image was downloaded, the container was launched:
+
+```bash
+sudo docker run -d \
+  --name juice-shop \
+  -p 3000:3000 \
+  bkimminich/juice-shop
+```
+
+Docker container status was verified with:
+
+```bash
+sudo docker ps
+```
+
+The running container showed the port mapping:
+
+```text
+0.0.0.0:3000->3000/tcp
+```
+
+This exposed OWASP Juice Shop through:
+
+```text
+http://10.50.20.100:3000
+```
+
+### Evidence — Juice Shop Docker Deployment
+
+![Phase 12 Juice Shop Docker Deployment](images/phase12-juice-shop-docker-deployment.png)
+
+---
+
+# 4. Application Connectivity Validation
+
+The application was tested directly from SOC-Ubuntu.
+
+```bash
+curl -I http://10.50.20.100:3000
+```
+
+The application returned:
+
+```text
+HTTP/1.1 200 OK
+```
+
+Several HTTP headers were observed, including:
+
+```text
+Access-Control-Allow-Origin: *
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+Feature-Policy: payment 'self'
+X-Recruiting: /#/jobs
+```
+
+Connectivity was then tested from SOC-Kali.
+
+```bash
+curl -I http://10.50.20.100:3000
+```
+
+SOC-Kali also received:
+
+```text
+HTTP/1.1 200 OK
+```
+
+The Juice Shop interface was successfully opened in the Kali browser at:
+
+```text
+http://10.50.20.100:3000/#/
+```
+
+This confirmed that the analyst workstation could reach the vulnerable application across the lab network.
+
+---
+
+# 5. Web Application Reconnaissance
+
+After connectivity was established, SOC-Kali was used to perform reconnaissance against the Juice Shop application.
+
+The purpose of this stage was to determine:
+
+- Whether TCP/3000 was accessible
+- What service was listening
+- What web application was running
+- What HTTP technologies and headers were exposed
+
+This provided a baseline before vulnerability enumeration.
+
+---
+
+# 6. Technology Fingerprinting with WhatWeb
+
+WhatWeb was used to fingerprint the application.
+
+```bash
+whatweb http://10.50.20.100:3000
+```
+
+WhatWeb returned information including:
+
+```text
+http://10.50.20.100:3000 [200 OK]
+HTML5
+IP[10.50.20.100]
+Script[module]
+Title[OWASP Juice Shop]
+X-Frame-Options[SAMEORIGIN]
+```
+
+WhatWeb also identified uncommon headers including:
+
+```text
+access-control-allow-origin
+x-content-type-options
+feature-policy
+x-recruiting
+```
+
+The fingerprint confirmed that the target application was **OWASP Juice Shop**.
+
+### Evidence — WhatWeb Fingerprinting
+
+![Phase 12 WhatWeb Fingerprinting](images/phase12-whatweb-fingerprinting.png)
+
+---
+
+# 7. Vulnerability Enumeration with Nikto
+
+Nikto was used from SOC-Kali to perform automated web vulnerability enumeration.
+
+```bash
+nikto -h http://10.50.20.100:3000
+```
+
+Nikto generated thousands of HTTP requests while checking the application for potentially insecure configurations and accessible resources.
+
+The completed scan reported:
+
+```text
+4334 requests
+20 errors
+12 items reported
+1 host tested
+```
+
+The scanner reached its error limit during testing, but it still completed and produced useful findings.
+
+---
+
+# 8. Nikto Findings
+
+Nikto reported several security-related observations.
+
+## Missing Security Headers
+
+The scanner reported missing HTTP security headers including:
+
+```text
+Content-Security-Policy
+Referrer-Policy
+Permissions-Policy
+Strict-Transport-Security
+```
+
+These headers can provide additional browser-side security controls in production web applications.
+
+## Interesting Paths
+
+Nikto identified paths including:
+
+```text
+/ftp/
+/public/
+```
+
+These paths may warrant further manual review during a real assessment to determine whether unintended information is accessible.
+
+## Potentially Sensitive Paths
+
+Nikto also reported potential findings involving:
+
+```text
+/.htpasswd
+/.bash_history
+/.sh_history
+```
+
+These were **scanner-reported potential findings** and were not treated as confirmed sensitive-file exposure without additional manual verification.
+
+This distinction is important because automated vulnerability scanner results must be validated before they are classified as confirmed vulnerabilities.
+
+### Evidence — Nikto Vulnerability Enumeration
+
+![Phase 12 Nikto Vulnerability Enumeration](images/phase12-nikto-vulnerability-enumeration.png)
+
+---
+
+# 9. Application Failure During Assessment
+
+During the vulnerability assessment, SOC-Kali temporarily lost access to:
+
+```text
+10.50.20.100:3000
+```
+
+Rather than assuming the connectivity problem was caused by a firewall or security control, the target application itself was investigated.
+
+On SOC-Ubuntu:
+
+```bash
+sudo docker ps
+```
+
+showed that the Juice Shop container was no longer running.
+
+The complete container list was then examined:
+
+```bash
+sudo docker ps -a
+```
+
+The Juice Shop container showed:
+
+```text
+Exited (139)
+```
+
+This demonstrated an important troubleshooting principle:
+
+> Scanner connectivity errors do not automatically indicate a network or firewall problem. The status of the target application must also be verified.
+
+---
+
+# 10. Docker Container Recovery
+
+Because the existing Juice Shop container still existed, the application did not need to be rebuilt.
+
+The container was restarted with:
+
+```bash
+sudo docker start juice-shop
+```
+
+Docker returned:
+
+```text
+juice-shop
+```
+
+The running container was verified:
+
+```bash
+sudo docker ps
+```
+
+The application again showed:
+
+```text
+0.0.0.0:3000->3000/tcp
+```
+
+SOC-Kali was then able to regain access to the application.
+
+This restored the assessment environment without reinstalling or recreating Juice Shop.
+
+---
+
+# 11. Troubleshooting Lesson
+
+The application outage provided an additional troubleshooting exercise that became part of the security assessment.
+
+The troubleshooting workflow was:
+
+```text
+Scanner Connection Failure
+        |
+        v
+Verify Target Connectivity
+        |
+        v
+Check Docker Status
+        |
+        v
+Container Not Running
+        |
+        v
+docker ps -a
+        |
+        v
+Exited (139)
+        |
+        v
+Restart Existing Container
+        |
+        v
+Verify TCP/3000
+        |
+        v
+Resume Assessment
+```
+
+This demonstrated the importance of separating:
+
+- Network failures
+- Firewall behavior
+- Application failures
+- Container failures
+- Scanner errors
+
+before determining the cause of an assessment interruption.
+
+---
+
+# 12. Findings Documentation
+
+A Phase 12 findings record was created on SOC-Kali to summarize the assessment.
+
+The findings included:
+
+### Reconnaissance
+
+- Nmap identified the web application on TCP/3000
+- WhatWeb identified OWASP Juice Shop
+- Nikto performed vulnerability enumeration
+
+### Nikto Findings
+
+- Referrer-Policy header missing
+- Content-Security-Policy header missing
+- Permissions-Policy header missing
+- `/ftp/` directory identified
+- Additional potentially sensitive paths reported
+
+### Troubleshooting
+
+- Juice Shop Docker container unexpectedly stopped
+- `docker ps -a` identified the container as exited with code 139
+- Existing container was restarted
+- TCP/3000 availability was restored
+- SOC-Kali regained access to the application
+
+### Evidence — Assessment Findings Summary
+
+![Phase 12 Web Assessment Findings](images/phase12-web-assessment-findings.png)
+
+---
+
+# 13. Assessment Workflow
+
+The completed Phase 12 assessment followed this workflow:
+
+```text
+                    SOC-Kali
+                       |
+          +------------+------------+
+          |            |            |
+        Nmap        WhatWeb        Nikto
+          |            |            |
+          +------------+------------+
+                       |
+                       v
+                  SOC-Ubuntu
+                 10.50.20.100
+                       |
+             +---------+---------+
+             |                   |
+             v                   v
+         Apache :80          Docker
+                                  |
+                                  v
+                         OWASP Juice Shop
+                              TCP/3000
+```
+
+The process can be summarized as:
+
+```text
+Discovery
+   |
+   v
+Service Enumeration
+   |
+   v
+Application Fingerprinting
+   |
+   v
+Vulnerability Enumeration
+   |
+   v
+Finding Analysis
+   |
+   v
+Troubleshooting
+   |
+   v
+Service Recovery
+   |
+   v
+Validation
+   |
+   v
+Documentation
+```
+
+---
+
+# 14. Security Findings Summary
+
+| Finding | Assessment |
+|---|---|
+| Content-Security-Policy missing | Security hardening opportunity |
+| Referrer-Policy missing | Security hardening opportunity |
+| Permissions-Policy missing | Security hardening opportunity |
+| Strict-Transport-Security missing | Relevant when HTTPS is deployed |
+| `/ftp/` identified | Requires manual review |
+| `/public/` identified | Requires manual review |
+| Potential sensitive paths | Scanner finding requiring validation |
+| Access-Control-Allow-Origin: `*` | Configuration should be reviewed based on application requirements |
+| Juice Shop container exited | Operational/application availability issue |
+
+The assessment intentionally distinguishes between **confirmed observations** and **automated scanner findings requiring validation**.
+
+---
+
+# 15. Lessons Learned
+
+Phase 12 reinforced several important security assessment concepts.
+
+### Automated Scanners Require Validation
+
+Nikto can identify potential vulnerabilities and configuration weaknesses, but scanner output should not automatically be treated as confirmed vulnerabilities.
+
+Analysts must manually validate findings and understand the context in which they occur.
+
+### Multiple Tools Provide Better Context
+
+Nmap, WhatWeb, curl, Docker, and Nikto provided different views of the same target.
+
+Correlating these results produced a more complete understanding of the application than relying on a single tool.
+
+### Application Availability Matters
+
+When Juice Shop became unavailable, the problem initially appeared to be a connectivity issue.
+
+Checking Docker revealed that the application container itself had stopped.
+
+This demonstrated why analysts should verify the entire service chain:
+
+```text
+Host
+  ↓
+Network
+  ↓
+Port
+  ↓
+Process / Container
+  ↓
+Application
+```
+
+### Troubleshooting Is Part of Security Operations
+
+The unexpected container failure became a useful part of the exercise.
+
+Rather than rebuilding the environment, the existing container was identified, restarted, validated, and testing continued.
+
+---
+
+# 16. Skills Demonstrated
+
+Phase 12 demonstrated hands-on experience with:
+
+- Web application reconnaissance
+- Nmap service enumeration
+- HTTP service validation
+- Web technology fingerprinting
+- WhatWeb
+- Nikto
+- Vulnerability enumeration
+- HTTP security headers
+- Docker container deployment
+- Docker troubleshooting
+- Linux service validation
+- Apache
+- curl
+- OWASP Juice Shop
+- Security finding analysis
+- Scanner-result validation
+- Incident troubleshooting
+- Technical documentation
+
+---
+
+# 17. VirtualBox Snapshot
+
+After completing the web application security assessment and validating the environment, a VirtualBox snapshot was created to preserve the completed Phase 12 state.
+
+## Snapshot Name
+
+```text
+Phase 12 - Web Application Security Assessment Complete
+```
+
+## Snapshot Description
+
+```text
+Completed Phase 12 web application security assessment.
+
+Deployed OWASP Juice Shop on SOC-Ubuntu and performed
+Nmap service enumeration, WhatWeb fingerprinting, and
+Nikto vulnerability enumeration from SOC-Kali.
+
+Validated TCP/3000 connectivity and recovered the Juice
+Shop Docker container after an unexpected exit.
+
+Documented assessment findings, troubleshooting actions,
+and lessons learned.
+```
+
+The snapshot provides a recovery point before proceeding to the next phase of the Enterprise Security Operations Lab.
+
+### Snapshot Evidence
+
+If a screenshot of the completed VirtualBox snapshot is stored in the repository:
+
+![Phase 12 VirtualBox Snapshot](images/phase12-virtualbox-snapshot.png)
+
+---
+
+# 18. Phase 12 Conclusion
+
+Phase 12 successfully expanded the Enterprise Security Operations Lab into **web application security assessment**.
+
+OWASP Juice Shop was deployed on SOC-Ubuntu as a deliberately vulnerable application. SOC-Kali was then used to perform service discovery, application fingerprinting, and automated vulnerability enumeration.
+
+Nmap identified exposed services, WhatWeb fingerprinted the application, and Nikto identified potential security weaknesses and configuration issues.
+
+An unexpected Juice Shop container failure also provided practical troubleshooting experience. Docker status information was used to identify the stopped container, recover the service, verify TCP/3000 availability, and continue the assessment.
+
+The phase demonstrated that effective vulnerability assessment involves more than running scanners. Analysts must correlate multiple data sources, validate findings, troubleshoot target availability, distinguish potential findings from confirmed vulnerabilities, and clearly document the results.
+
+---
+
+## Phase 12 Status
+
+**COMPLETE ✅**
+
+**Web Application Security Assessment**
+
+**Tools:** Nmap | WhatWeb | Nikto | Docker | curl | Apache | OWASP Juice Shop
+
+**Workflow:** Discovery → Fingerprinting → Vulnerability Enumeration → Analysis → Troubleshooting → Recovery → Validation → Documentation
 
 ---
 
@@ -7397,8 +8045,8 @@ All scanning, testing, traffic generation, vulnerability assessment, and securit
 | Phase 9 — Threat Intelligence | ✅ Complete |
 | Phase 10 — Centralized Network Security Logging & Correlation | ✅ Complete |
 | Phase 11 — Incident Response & Case Management with DFIR-IRIS | ✅ Complete |
-| Phase 12 — Web Application Security | 🔄 Next |
-| Phase 13 — Python Security Automation | ⏳ Planned |
+| Phase 12 — Web Application Security |  ✅ Complete  |
+| Phase 13 — Python Security Automation |  🔄 Next  |
 | Phase 14 — Enterprise SOC Investigation | ⏳ Planned |
 
 ---
