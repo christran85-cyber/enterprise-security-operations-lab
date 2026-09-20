@@ -37,7 +37,7 @@
 | Category | Details |
 |---|---|
 | **Status** | ✅ Complete |
-| **Network Detection** | Suricata |
+| **Network Detection** | Suricata IDS/IPS |
 | **Endpoint Detection** | Wazuh SIEM/XDR |
 | **Traffic Source** | SOC-Kali `10.10.10.103` |
 | **Target** | SOC-Ubuntu `10.50.20.100` |
@@ -55,7 +55,7 @@
 
 Phase 6 combined the endpoint-monitoring capabilities established with **Wazuh** and the network-detection capabilities established with **Suricata**.
 
-Instead of investigating alerts from only one security control, this phase demonstrated how a SOC analyst can correlate evidence from multiple sources.
+Instead of investigating alerts from only one security control, this phase demonstrated how a SOC analyst can correlate evidence from multiple security sources.
 
 Controlled security activity originated from:
 
@@ -71,7 +71,7 @@ SOC-Ubuntu
 10.50.20.100
 ```
 
-The activity included:
+The controlled activity included:
 
 - Network reconnaissance
 - Nmap scanning
@@ -80,6 +80,8 @@ The activity included:
 - Failed SSH authentication
 
 Suricata provided **network-level visibility**, while Wazuh provided **endpoint-level visibility**.
+
+The goal was to combine both perspectives into a single investigation.
 
 ```text
                SOC-Kali
@@ -109,7 +111,7 @@ Suricata provided **network-level visibility**, while Wazuh provided **endpoint-
              Event Correlation
 ```
 
-This demonstrated a fundamental SOC capability:
+This phase demonstrated a fundamental SOC capability:
 
 > Reconstructing suspicious activity using evidence collected from multiple security controls.
 
@@ -117,7 +119,7 @@ This demonstrated a fundamental SOC capability:
 
 # 🏗️ Detection Architecture
 
-The Phase 6 investigation used two primary security-monitoring perspectives.
+Phase 6 used two primary security-monitoring perspectives.
 
 ## Network Perspective
 
@@ -137,6 +139,10 @@ Suricata
     ├── Signature
     └── Application Data
 ```
+
+Suricata provided visibility into activity crossing the network.
+
+---
 
 ## Endpoint Perspective
 
@@ -160,6 +166,10 @@ Wazuh Manager
     └── MITRE ATT&CK
 ```
 
+Wazuh provided visibility into what occurred on the endpoint.
+
+---
+
 ## Correlation
 
 ```text
@@ -169,8 +179,8 @@ Wazuh Evidence
        │
        ▼
 Source IP
+Destination
 Timestamp
-Target
 Activity
        │
        ▼
@@ -215,8 +225,6 @@ SOC-Ubuntu
 10.50.20.100
 ```
 
-The reconnaissance provided the initial activity for the investigation.
-
 The traffic path was:
 
 ```text
@@ -233,13 +241,15 @@ Suricata
 SOC-Ubuntu
 ```
 
+The controlled reconnaissance provided the initial network activity for the Phase 6 investigation.
+
 ---
 
 ## 📸 Evidence — Nmap Reconnaissance
 
 ![Nmap Reconnaissance](../images/phase6-nmap-reconnaissance.png)
 
-This evidence documents the controlled reconnaissance generated from SOC-Kali against SOC-Ubuntu.
+The reconnaissance originated from SOC-Kali and targeted the Ubuntu system located in the DMZ.
 
 **Result:** ✅ Controlled reconnaissance successfully generated.
 
@@ -249,16 +259,16 @@ This evidence documents the controlled reconnaissance generated from SOC-Kali ag
 
 Suricata detected the Kali-to-Ubuntu reconnaissance traffic.
 
-Network-level telemetry provided visibility into:
+Network telemetry provided visibility into:
 
 - Source IP
 - Destination IP
-- Network protocol
+- Protocol
 - Ports
 - Detection signature
 - Event timestamp
 
-The detection established the first half of the incident-correlation workflow.
+The detection path was:
 
 ```text
 SOC-Kali
@@ -266,6 +276,9 @@ SOC-Kali
       │
       ▼
 Reconnaissance
+      │
+      ▼
+OPNsense
       │
       ▼
 Suricata
@@ -280,7 +293,9 @@ Network Alert
 
 ![Suricata Reconnaissance Detection](../images/phase6-suricata-recon-detection.png)
 
-**Result:** ✅ Suricata detected the controlled reconnaissance activity.
+The Suricata alert provided network evidence associated with the controlled reconnaissance.
+
+**Result:** ✅ Suricata successfully detected the reconnaissance activity.
 
 ---
 
@@ -288,13 +303,13 @@ Network Alert
 
 Controlled failed SSH authentication was generated against SOC-Ubuntu.
 
-The purpose was to create endpoint authentication telemetry that could be investigated in Wazuh and correlated with the network evidence.
+The purpose was to generate endpoint authentication telemetry that could be investigated through Wazuh and compared with the network evidence.
 
 ```text
 SOC-Kali
 10.10.10.103
       │
-      │ SSH
+      │ SSH Authentication
       ▼
 SOC-Ubuntu
 10.50.20.100
@@ -303,15 +318,15 @@ SOC-Ubuntu
 Authentication Failure
 ```
 
-This provided endpoint evidence associated with activity originating from the same controlled Kali system.
+This created a second source of security evidence associated with the same controlled source system.
 
 ---
 
-## 📸 Evidence — Failed SSH Login
+## 📸 Evidence — Failed SSH Authentication
 
 ![Failed SSH Authentication](../images/phase6-ssh-failed-login.png)
 
-The controlled SSH authentication failure generated Linux authentication telemetry on SOC-Ubuntu.
+The failed SSH login generated Linux authentication telemetry on SOC-Ubuntu.
 
 **Result:** ✅ Controlled endpoint authentication activity successfully generated.
 
@@ -320,8 +335,6 @@ The controlled SSH authentication failure generated Linux authentication telemet
 # 🛡️ Wazuh SSH Detection
 
 The Wazuh Agent on SOC-Ubuntu collected the authentication telemetry and forwarded it to the centralized Wazuh environment.
-
-The monitoring path was:
 
 ```text
 Failed SSH Login
@@ -342,7 +355,17 @@ Detection Rule
 Security Alert
 ```
 
-Wazuh provided endpoint-level information that Suricata alone could not provide, including authentication and username context. :contentReference[oaicite:1]{index=1}
+Wazuh provided endpoint context that network monitoring alone could not provide.
+
+This included information related to:
+
+- Authentication result
+- Username
+- Source IP
+- Target endpoint
+- Wazuh rule
+- Alert severity
+- Timestamp
 
 ---
 
@@ -350,7 +373,9 @@ Wazuh provided endpoint-level information that Suricata alone could not provide,
 
 ![Wazuh SSH Detection](../images/phase6-wazuh-ssh-detection.png)
 
-**Result:** ✅ Wazuh detected the SSH authentication activity.
+The Wazuh alert demonstrated successful endpoint detection of the controlled SSH authentication activity.
+
+**Result:** ✅ SSH authentication activity detected by Wazuh.
 
 ---
 
@@ -358,16 +383,18 @@ Wazuh provided endpoint-level information that Suricata alone could not provide,
 
 The Wazuh event was expanded for deeper investigation.
 
-The detailed event provided additional context such as:
+The detailed event provided additional context including:
 
-- Source IP
-- Target endpoint
-- Username
-- Authentication result
-- Detection rule
-- Alert severity
-- Raw authentication information
-- Timestamp
+```text
+Source IP
+Target Endpoint
+Username
+Authentication Result
+Detection Rule
+Alert Severity
+Timestamp
+Raw Event Information
+```
 
 ---
 
@@ -375,17 +402,17 @@ The detailed event provided additional context such as:
 
 ![Wazuh SSH Event Details](../images/phase6-wazuh-ssh-event-details.png)
 
-The detailed event provided endpoint context required for investigation.
+The detailed Wazuh event provided endpoint-level context for the authentication activity.
 
-**Result:** ✅ Endpoint event details successfully analyzed.
+**Result:** ✅ Endpoint event details successfully investigated.
 
 ---
 
 # 🗺️ MITRE ATT&CK Analysis
 
-Wazuh provided MITRE ATT&CK context for the SSH authentication event.
+The Wazuh authentication event was reviewed with MITRE ATT&CK context.
 
-This helped translate the raw security event into a standardized attacker-behavior framework.
+MITRE ATT&CK provides a standardized framework for categorizing behaviors associated with adversary tactics and techniques.
 
 ```text
 Authentication Event
@@ -394,23 +421,26 @@ Authentication Event
 Wazuh Detection
        │
        ▼
-MITRE ATT&CK Mapping
+Detection Rule
        │
        ▼
-Security Context
+MITRE ATT&CK
+       │
+       ▼
+Analyst Context
 ```
 
-MITRE ATT&CK information helps analysts understand how observed behavior may relate to common adversary techniques.
+MITRE ATT&CK mapping does not automatically prove that an event is malicious.
 
-It does not automatically prove malicious intent.
-
-The event must still be evaluated in context.
+Instead, it helps the analyst understand how the observed activity may relate to known security behaviors.
 
 ---
 
 ## 📸 Evidence — MITRE ATT&CK Mapping
 
 ![Wazuh MITRE ATT&CK Mapping](../images/phase6-wazuh-mitre-mapping.png)
+
+The authentication event was reviewed alongside its MITRE ATT&CK information.
 
 **Result:** ✅ Authentication activity reviewed with MITRE ATT&CK context.
 
@@ -420,18 +450,18 @@ The event must still be evaluated in context.
 
 The network and endpoint evidence could now be compared.
 
-Suricata provided:
+### Suricata provided:
 
 ```text
 Source IP
 Destination IP
-Network Protocol
+Protocol
 Ports
 Network Signature
 Timestamp
 ```
 
-Wazuh provided:
+### Wazuh provided:
 
 ```text
 Source IP
@@ -441,7 +471,7 @@ Authentication Result
 Detection Rule
 Severity
 Timestamp
-MITRE ATT&CK
+MITRE ATT&CK Context
 ```
 
 The primary correlation points were:
@@ -456,7 +486,7 @@ Timestamp
 Observed Activity
 ```
 
-This provided two different perspectives on related activity.
+This allowed the analyst to compare two different perspectives of related activity.
 
 ---
 
@@ -464,7 +494,7 @@ This provided two different perspectives on related activity.
 
 ![Suricata SSH Correlation](../images/phase6-suricata-ssh-correlation.png)
 
-This network evidence was compared with the endpoint authentication evidence recorded by Wazuh.
+The Suricata network evidence was compared with the endpoint authentication evidence recorded by Wazuh.
 
 **Result:** ✅ Network and endpoint evidence successfully correlated.
 
@@ -475,8 +505,6 @@ This network evidence was compared with the endpoint authentication evidence rec
 The investigation was expanded beyond SSH authentication.
 
 Nmap was also used to generate HTTP reconnaissance against SOC-Ubuntu.
-
-This provided additional application-layer network telemetry.
 
 ```text
 SOC-Kali
@@ -492,13 +520,15 @@ Suricata
 SOC-Ubuntu
 ```
 
+This produced additional application-layer network telemetry.
+
 ---
 
 ## 📸 Evidence — Nmap Web Reconnaissance
 
 ![Suricata Nmap Web Reconnaissance](../images/phase6-suricata-nmap-web-recon.png)
 
-Suricata detected the web-reconnaissance traffic.
+Suricata detected the web-reconnaissance traffic generated from SOC-Kali.
 
 **Result:** ✅ HTTP reconnaissance successfully observed by Suricata.
 
@@ -508,19 +538,17 @@ Suricata detected the web-reconnaissance traffic.
 
 Suricata's ET Open rules provided additional context for the HTTP reconnaissance.
 
-The detection identified activity associated with the **Nmap Scripting Engine**.
+The detection identified activity associated with the Nmap Scripting Engine.
 
-This was important because application-layer information provided more context than simply identifying:
+This demonstrated how IDS signatures can provide more information than simply identifying:
 
 ```text
 Source IP
 Destination IP
-Port
+Destination Port
 ```
 
-Instead, the detection provided information about the tool responsible for the traffic.
-
-The original Phase 6 investigation specifically identified an ET Open detection for the Nmap HTTP User-Agent. :contentReference[oaicite:2]{index=2}
+Application-layer signatures can provide information about the tool or behavior responsible for the traffic.
 
 ---
 
@@ -528,9 +556,9 @@ The original Phase 6 investigation specifically identified an ET Open detection 
 
 ![ET Open Nmap Detection](../images/phase6-incident1-suricata-nmap-details.png)
 
-The alert demonstrated how IDS signatures can identify application-layer characteristics associated with reconnaissance tools.
+The ET Open alert provided additional context for the Nmap-generated HTTP reconnaissance.
 
-**Result:** ✅ Nmap HTTP reconnaissance identified through ET Open detection.
+**Result:** ✅ Nmap HTTP reconnaissance identified through Suricata ET Open detection.
 
 ---
 
@@ -557,7 +585,7 @@ Suricata
 Network Alerts
 ```
 
-Gobuster activity generated additional Suricata evidence that could be compared with the earlier reconnaissance.
+Gobuster generated additional network telemetry that could be analyzed through Suricata.
 
 ---
 
@@ -573,7 +601,7 @@ The alerts demonstrate network visibility during controlled web enumeration.
 
 # 🧩 Incident Correlation
 
-The investigation combined the available evidence into a single activity sequence.
+The investigation combined the available evidence into a single sequence of controlled activity.
 
 ```text
 SOC-Kali
@@ -608,7 +636,7 @@ Network Telemetry    Endpoint Telemetry
 
 The investigation did not depend on a single alert.
 
-Instead, multiple data sources were used to understand the activity.
+Multiple security controls were used to understand the activity.
 
 ---
 
@@ -620,11 +648,11 @@ This evidence documents the Wazuh side of the correlated investigation.
 
 ---
 
-## 📸 Evidence — Wazuh SSH Attack Investigation
+## 📸 Evidence — Wazuh SSH Investigation
 
-![Wazuh SSH Attack](../images/phase6-wazuh-ssh-attack.png)
+![Wazuh SSH Investigation](../images/phase6-wazuh-ssh-attack.png)
 
-This provides additional endpoint evidence associated with the SSH portion of the controlled incident.
+This provides additional endpoint evidence associated with the SSH portion of the controlled activity.
 
 **Result:** ✅ Multi-source security evidence successfully reconstructed into a correlated investigation.
 
@@ -632,37 +660,38 @@ This provides additional endpoint evidence associated with the SSH portion of th
 
 # 💻 Commands Used
 
-The following commands represent the primary controlled testing performed during the Phase 6 investigation.
+The following commands and tools were used to generate controlled activity during Phase 6.
+
+---
 
 ## Nmap Reconnaissance
 
-Target:
-
-```text
-10.50.20.100
-```
-
-Nmap was used from SOC-Kali to generate controlled reconnaissance against SOC-Ubuntu.
-
-Example Phase 6 reconnaissance workflow:
+SOC-Kali generated reconnaissance against SOC-Ubuntu:
 
 ```bash
 nmap 10.50.20.100
 ```
 
-The generated traffic was then verified in Suricata.
+Target:
+
+```text
+SOC-Ubuntu
+10.50.20.100
+```
+
+The resulting network activity was investigated through Suricata.
 
 ---
 
-## Service and Version Discovery
+## Service Discovery
 
-Service reconnaissance can be performed against the controlled target using:
+Nmap service detection was used to gather additional information about exposed services:
 
 ```bash
 nmap -sV 10.50.20.100
 ```
 
-This provides service information while generating network telemetry that can be investigated through Suricata.
+This generated additional network telemetry for Suricata analysis.
 
 ---
 
@@ -674,17 +703,15 @@ SSH was used from SOC-Kali against the controlled Ubuntu target:
 ssh <test-user>@10.50.20.100
 ```
 
-A controlled failed login generated authentication telemetry for Wazuh investigation.
-
-> Use the same controlled test account/username documented in your lab rather than real credentials.
+Controlled failed authentication generated Linux security telemetry that was collected by Wazuh.
 
 ---
 
 ## HTTP Reconnaissance
 
-Nmap HTTP functionality was used against the controlled Ubuntu web service to generate application-layer reconnaissance traffic.
+Nmap HTTP reconnaissance was used against the controlled Ubuntu web service.
 
-The resulting HTTP activity was investigated through Suricata and ET Open detections.
+The resulting traffic was investigated through Suricata and ET Open detections.
 
 ---
 
@@ -707,8 +734,6 @@ SOC-Ubuntu
 Suricata Detection
 ```
 
-The resulting Suricata alerts were documented as Phase 6 evidence.
-
 ---
 
 ## Command Reference
@@ -717,18 +742,18 @@ The resulting Suricata alerts were documented as Phase 6 evidence.
 |---|---|
 | Network reconnaissance | `nmap 10.50.20.100` |
 | Service discovery | `nmap -sV 10.50.20.100` |
-| SSH test | `ssh <test-user>@10.50.20.100` |
-| Web reconnaissance | Nmap HTTP reconnaissance |
+| SSH authentication test | `ssh <test-user>@10.50.20.100` |
+| HTTP reconnaissance | Nmap HTTP reconnaissance |
 | Web enumeration | Gobuster |
 | Network investigation | Suricata / OPNsense |
 | Endpoint investigation | Wazuh |
-| Correlation | Source IP + target + timestamp + activity |
+| Correlation | Source IP + destination + timestamp + activity |
 
 ---
 
 # 🧪 Validation
 
-Phase 6 validated the end-to-end monitoring workflow.
+Phase 6 validated the multi-source monitoring workflow.
 
 | Test | Detection Source | Result |
 |---|---|---|
@@ -739,11 +764,11 @@ Phase 6 validated the end-to-end monitoring workflow.
 | MITRE ATT&CK context | Wazuh | ✅ Validated |
 | SSH network evidence | Suricata | ✅ Correlated |
 | HTTP reconnaissance | Suricata | ✅ Detected |
-| Nmap HTTP User-Agent | ET Open / Suricata | ✅ Detected |
+| Nmap HTTP activity | ET Open / Suricata | ✅ Detected |
 | Gobuster enumeration | Suricata | ✅ Observed |
 | Cross-platform correlation | Suricata + Wazuh | ✅ Completed |
 
-The complete workflow was:
+The complete validation workflow was:
 
 ```text
 Generate
@@ -767,9 +792,9 @@ Document
 
 # 🔧 Troubleshooting Methodology
 
-Phase 6 reinforced that successful traffic generation does not automatically prove that monitoring is operational.
+Phase 6 reinforced that successfully generating traffic does not automatically prove that monitoring is operational.
 
-Multiple layers must work correctly:
+Multiple layers must work correctly.
 
 ```text
 Traffic Generation
@@ -799,47 +824,49 @@ Wazuh Manager
 Security Alert
 ```
 
-When expected evidence is missing, the investigation should proceed layer by layer.
+When expected evidence is missing, troubleshooting should proceed layer by layer.
+
+---
 
 ## Network Detection Troubleshooting
 
 Verify:
 
-1. Source can reach the target.
+1. SOC-Kali can reach SOC-Ubuntu.
 2. Traffic crosses OPNsense.
 3. Suricata is running.
 4. Suricata is processing packets.
 5. The correct interface is monitored.
 6. Relevant detection rules are enabled.
-7. Alerts are appearing in Suricata.
+7. Alerts appear in Suricata.
+
+---
 
 ## Endpoint Detection Troubleshooting
 
 Verify:
 
-1. The activity actually reached SOC-Ubuntu.
+1. The activity reached SOC-Ubuntu.
 2. Ubuntu generated the expected local log.
 3. The Wazuh Agent is running.
-4. The agent can reach the Wazuh Manager.
+4. The Wazuh Agent can communicate with the Wazuh Manager.
 5. The event was collected.
 6. Wazuh processed the event.
-7. A detection rule generated an alert.
+7. A Wazuh rule generated the expected alert.
 
-This avoids assuming that a missing alert automatically means the detection platform is broken.
+This prevents incorrectly assuming that a missing alert automatically means the monitoring platform is broken.
 
 ---
 
 # 💡 Lessons Learned
 
-The original Phase 6 investigation produced several important SOC lessons. :contentReference[oaicite:3]{index=3}
-
 ## 1. One Alert Rarely Provides the Complete Picture
 
 A network alert may identify suspicious communication without showing what happened on the endpoint.
 
-An endpoint alert may identify a failed authentication without showing the network activity that preceded it.
+An endpoint alert may identify failed authentication without showing the network activity that preceded it.
 
-Combining both provides better context.
+Combining both provides stronger context.
 
 ---
 
@@ -862,13 +889,13 @@ Wazuh
    └── MITRE ATT&CK
 ```
 
-Together, they provide stronger investigation evidence.
+Together, they provide a more complete investigation.
 
 ---
 
-## 3. Suricata Can Identify Reconnaissance Before Endpoint Events
+## 3. Suricata Can Provide Early Reconnaissance Context
 
-Network reconnaissance can occur before authentication attempts or other endpoint activity.
+Network reconnaissance may occur before authentication attempts or other endpoint activity.
 
 Network IDS telemetry can therefore provide earlier context in an incident timeline.
 
@@ -876,7 +903,7 @@ Network IDS telemetry can therefore provide earlier context in an incident timel
 
 ## 4. ET Open Signatures Add Application Context
 
-The Nmap HTTP User-Agent detection demonstrated that IDS signatures can identify information about the tool generating the traffic.
+The Nmap HTTP detection demonstrated that IDS signatures can identify characteristics associated with reconnaissance tools.
 
 This provides more context than IP addresses and ports alone.
 
@@ -884,13 +911,15 @@ This provides more context than IP addresses and ports alone.
 
 ## 5. Wazuh Provides Endpoint Context
 
-Wazuh provided authentication information that network monitoring alone could not provide, including username and authentication results.
+Wazuh provided authentication information that network monitoring alone could not provide.
+
+This included endpoint and authentication-related information.
 
 ---
 
 ## 6. Source IP and Time Are Valuable Correlation Points
 
-Two different security platforms can often be correlated using:
+Different security platforms can often be correlated using:
 
 ```text
 Source IP
@@ -908,13 +937,13 @@ Observed Behavior
 
 MITRE ATT&CK provides a standardized framework for describing security behaviors.
 
-It helps move the investigation from:
+It helps move an investigation from:
 
 ```text
 Raw Alert
 ```
 
-to:
+toward:
 
 ```text
 Recognizable Security Behavior
@@ -924,13 +953,13 @@ Recognizable Security Behavior
 
 ## 8. Controlled Testing Validates Security Controls
 
-Controlled attack simulation provides repeatable evidence that monitoring systems can observe expected activity.
+Controlled security testing provides repeatable evidence that monitoring systems can observe expected activity.
 
 ---
 
 ## 9. Traffic Generation Alone Is Not Validation
 
-Successfully running Nmap, Gobuster, or SSH does not prove the security monitoring system worked.
+Successfully running Nmap, Gobuster, or SSH does not prove that monitoring worked.
 
 The resulting alert must be confirmed in the corresponding security platform.
 
@@ -938,7 +967,7 @@ The resulting alert must be confirmed in the corresponding security platform.
 
 ## 10. End-to-End Monitoring Requires Every Layer
 
-Network connectivity, IDS operation, endpoint logging, Wazuh Agent collection, and SIEM ingestion must all function correctly.
+Network connectivity, IDS operation, endpoint logging, Wazuh Agent collection, and SIEM processing must all function correctly.
 
 ---
 
@@ -958,7 +987,7 @@ Correlate
 Document
 ```
 
-This is a fundamental SOC analyst workflow.
+This workflow became the foundation for later incident-response phases.
 
 ---
 
@@ -974,7 +1003,7 @@ This is a fundamental SOC analyst workflow.
 | **SSH Analysis** | Investigated authentication failures |
 | **HTTP Reconnaissance** | Generated and investigated web reconnaissance |
 | **Gobuster** | Generated controlled HTTP enumeration |
-| **ET Open Analysis** | Investigated Nmap User-Agent detection |
+| **ET Open Analysis** | Investigated Nmap-related detection |
 | **MITRE ATT&CK** | Added adversary-behavior context |
 | **Incident Reconstruction** | Combined network and endpoint evidence |
 | **Detection Validation** | Confirmed expected security alerts |
@@ -985,30 +1014,41 @@ This is a fundamental SOC analyst workflow.
 
 # 📸 Evidence Summary
 
-Your original Phase 6 documentation contains **12 screenshots**. :contentReference[oaicite:4]{index=4}
+Phase 6 contains **12 screenshots** documenting the security-monitoring and event-correlation workflow.
 
 | # | Evidence | Screenshot |
 |---|---|---|
-| 1 | Nmap reconnaissance | `phase6-nmap-reconnaissance.png` |
-| 2 | Suricata reconnaissance detection | `phase6-suricata-recon-detection.png` |
-| 3 | Failed SSH authentication | `phase6-ssh-failed-login.png` |
-| 4 | Wazuh SSH detection | `phase6-wazuh-ssh-detection.png` |
-| 5 | Wazuh SSH event details | `phase6-wazuh-ssh-event-details.png` |
-| 6 | Wazuh MITRE mapping | `phase6-wazuh-mitre-mapping.png` |
-| 7 | Suricata SSH correlation | `phase6-suricata-ssh-correlation.png` |
-| 8 | Suricata Nmap web reconnaissance | `phase6-suricata-nmap-web-recon.png` |
-| 9 | ET Open Nmap details | `phase6-incident1-suricata-nmap-details.png` |
-| 10 | Suricata Gobuster alerts | `phase6-suricata-gobuster-alerts.png` |
-| 11 | Wazuh SSH correlation | `phase6-incident1-wazuh-ssh-correlation.png` |
-| 12 | Wazuh SSH attack evidence | `phase6-wazuh-ssh-attack.png` |
+| 1 | Nmap Reconnaissance | `phase6-nmap-reconnaissance.png` |
+| 2 | Suricata Reconnaissance Detection | `phase6-suricata-recon-detection.png` |
+| 3 | Failed SSH Authentication | `phase6-ssh-failed-login.png` |
+| 4 | Wazuh SSH Detection | `phase6-wazuh-ssh-detection.png` |
+| 5 | Wazuh SSH Event Details | `phase6-wazuh-ssh-event-details.png` |
+| 6 | Wazuh MITRE Mapping | `phase6-wazuh-mitre-mapping.png` |
+| 7 | Suricata SSH Correlation | `phase6-suricata-ssh-correlation.png` |
+| 8 | Suricata Nmap Web Reconnaissance | `phase6-suricata-nmap-web-recon.png` |
+| 9 | ET Open Nmap Details | `phase6-incident1-suricata-nmap-details.png` |
+| 10 | Suricata Gobuster Alerts | `phase6-suricata-gobuster-alerts.png` |
+| 11 | Wazuh SSH Correlation | `phase6-incident1-wazuh-ssh-correlation.png` |
+| 12 | Wazuh SSH Investigation | `phase6-wazuh-ssh-attack.png` |
 
-All screenshots use:
+### Image Paths
 
 ```text
-../images/<filename>
+../images/phase6-nmap-reconnaissance.png
+../images/phase6-suricata-recon-detection.png
+../images/phase6-ssh-failed-login.png
+../images/phase6-wazuh-ssh-detection.png
+../images/phase6-wazuh-ssh-event-details.png
+../images/phase6-wazuh-mitre-mapping.png
+../images/phase6-suricata-ssh-correlation.png
+../images/phase6-suricata-nmap-web-recon.png
+../images/phase6-incident1-suricata-nmap-details.png
+../images/phase6-suricata-gobuster-alerts.png
+../images/phase6-incident1-wazuh-ssh-correlation.png
+../images/phase6-wazuh-ssh-attack.png
 ```
 
-No Phase 6 evidence needs to be renamed or duplicated.
+No Phase 6 screenshots need to be renamed or duplicated.
 
 ---
 
@@ -1018,14 +1058,14 @@ No Phase 6 evidence needs to be renamed or duplicated.
 
 Phase 6 successfully demonstrated an end-to-end security incident generation, detection, investigation, and correlation workflow.
 
-Controlled reconnaissance, HTTP enumeration, and SSH authentication activity were generated from:
+Controlled reconnaissance, HTTP enumeration, and SSH authentication activity originated from:
 
 ```text
 SOC-Kali
 10.10.10.103
 ```
 
-against:
+and targeted:
 
 ```text
 SOC-Ubuntu
@@ -1037,15 +1077,15 @@ Suricata provided network-level visibility into:
 - Reconnaissance
 - HTTP activity
 - Network communication
-- Nmap Scripting Engine activity
+- Nmap activity
 - ET Open detections
 - Gobuster enumeration
 
 Wazuh provided endpoint-level visibility into:
 
 - Failed SSH authentication
-- Source IP
-- Invalid username
+- Source information
+- Authentication context
 - Alert severity
 - Raw authentication events
 - MITRE ATT&CK mappings
@@ -1110,6 +1150,7 @@ The next phase focuses on:
 - Nmap service discovery
 - Vulnerability identification
 - Risk assessment
+- Apache security assessment
 - Apache hardening
 - Remediation
 - Validation scanning
