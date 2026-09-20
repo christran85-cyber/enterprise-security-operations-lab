@@ -1,6 +1,6 @@
 # 🛡️ Phase 04 — Wazuh SIEM/XDR
 
-> **Objective:** Validate centralized SIEM/XDR monitoring with Wazuh by investigating Windows and Linux security events, analyzing detection rules and severity, mapping activity to MITRE ATT&CK, and validating File Integrity Monitoring.
+> **Objective:** Validate centralized SIEM/XDR monitoring with Wazuh by investigating Windows and Linux security events, analyzing detection rules and severity, mapping activity to MITRE ATT&CK, validating File Integrity Monitoring, and correlating endpoint activity from multiple security telemetry sources.
 
 [← Phase 03](phase-03-endpoint-monitoring.md) | [🏠 Main Project](../README.md) | [Phase 05 →](phase-05-suricata-ids.md)
 
@@ -37,73 +37,86 @@
 | **Platform** | Wazuh SIEM/XDR |
 | **Wazuh Server** | SOC-Wazuh |
 | **Manager IP** | `10.10.10.102` |
-| **Windows Agent** | SOC-Windows11 |
-| **Linux Agent** | soc-ubuntu |
+| **Windows Endpoint** | SOC-Windows11 |
+| **Linux Endpoint** | soc-ubuntu |
 | **Authentication Detection** | Rule `5503` — Level `5` |
 | **Windows Process Detection** | Rule `67027` |
 | **FIM Detection** | Rule `554` |
-| **Framework** | MITRE ATT&CK |
-| **Focus** | Centralized detection, investigation & correlation |
+| **Security Framework** | MITRE ATT&CK |
+| **Focus** | Detection, investigation, correlation & endpoint monitoring |
 | **Next Phase** | Suricata IDS/IPS |
 
 ---
 
 # 📋 Overview
 
-Phase 4 moved the lab from basic endpoint telemetry collection into centralized **Security Information and Event Management (SIEM)** and **Extended Detection and Response (XDR)** operations.
+Phase 4 moved the Enterprise Security Operations Lab from endpoint telemetry collection into centralized **SIEM/XDR monitoring and SOC investigation**.
 
-The endpoint monitoring configured in Phase 3 provided telemetry from:
+Phase 3 established telemetry from Windows and Linux endpoints.
+
+Phase 4 used that telemetry to investigate security activity through Wazuh.
 
 ```text
-SOC-Windows11
-      +
-SOC-Ubuntu
-      │
-      ▼
-Wazuh Agents
-      │
-      ▼
-SOC-Wazuh
+SOC-Windows11                  SOC-Ubuntu
+      │                            │
+      ▼                            ▼
+Windows Telemetry             Linux Telemetry
+      │                            │
+      ▼                            ▼
+ Wazuh Agent                  Wazuh Agent
+      │                            │
+      └────────────┬───────────────┘
+                   │
+                   ▼
+               SOC-Wazuh
+               SIEM/XDR
+                   │
+                   ▼
+          Detection & Analysis
+                   │
+                   ▼
+           SOC Investigation
 ```
 
-Phase 4 focused on analyzing that telemetry from a SOC analyst perspective.
-
-The work included:
+The phase included:
 
 - Wazuh platform validation
 - Agent connectivity validation
-- Centralized Windows monitoring
-- Centralized Linux monitoring
-- Authentication-failure investigation
+- Ubuntu authentication-failure investigation
 - Wazuh rule analysis
-- Severity analysis
+- Alert severity analysis
 - MITRE ATT&CK mapping
 - Windows process investigation
 - File Integrity Monitoring
-- File creation detection
-- File modification detection
-- Hash and metadata analysis
+- Controlled file-change detection
+- FIM alert analysis
 - Event correlation
-- SIEM troubleshooting
+- Wazuh Dashboard troubleshooting
 
-The objective was not simply to confirm that events existed.
+The goal was to move beyond simply collecting logs.
 
-The objective was to follow a SOC workflow:
+The SOC workflow became:
 
 ```text
 Event
-  ↓
+  │
+  ▼
 Detection
-  ↓
+  │
+  ▼
 Alert
-  ↓
-Investigate
-  ↓
-Correlate
-  ↓
-Add Context
-  ↓
-Document Findings
+  │
+  ▼
+Investigation
+  │
+  ▼
+Context
+  │
+  ▼
+Correlation
+  │
+  ▼
+Finding
 ```
 
 ---
@@ -111,34 +124,35 @@ Document Findings
 # 🏗️ SIEM Architecture
 
 ```text
-              SOC-Windows11
-                    │
-                    │
-               Wazuh Agent
-                    │
-                    │
-                    ▼
-               ┌───────────┐
-               │ SOC-Wazuh │
-               │ SIEM/XDR  │
-               └─────┬─────┘
-                     ▲
-                     │
-                     │
-               Wazuh Agent
-                     │
-                     │
-                SOC-Ubuntu
-                10.50.20.100
+                    SOC-Windows11
+                          │
+                          │
+                     Wazuh Agent
+                          │
+                          ▼
+                  ┌───────────────┐
+                  │               │
+                  │   SOC-Wazuh   │
+                  │   SIEM/XDR    │
+                  │ 10.10.10.102  │
+                  │               │
+                  └───────────────┘
+                          ▲
+                          │
+                     Wazuh Agent
+                          │
+                          │
+                     SOC-Ubuntu
+                    10.50.20.100
 ```
 
-The complete telemetry path is:
+The security-event processing workflow is:
 
 ```text
 Endpoint Activity
        │
        ▼
-Local Security Log
+Operating System Logs
        │
        ▼
 Wazuh Agent
@@ -147,7 +161,10 @@ Wazuh Agent
 Wazuh Manager
        │
        ▼
-Decoder / Rule
+Decoder
+       │
+       ▼
+Detection Rule
        │
        ▼
 Security Alert
@@ -164,20 +181,21 @@ SOC Analyst
 # 🎯 Phase Objectives
 
 - [x] Validate Wazuh SIEM/XDR operation
-- [x] Validate Wazuh Indexer
-- [x] Validate Wazuh Manager
 - [x] Validate Wazuh Dashboard
+- [x] Validate Wazuh Manager
+- [x] Validate Wazuh Indexer
 - [x] Validate Filebeat
 - [x] Confirm Windows Agent connectivity
 - [x] Confirm Ubuntu Agent connectivity
-- [x] Investigate Linux authentication failures
-- [x] Analyze Wazuh rules and severity
+- [x] Investigate Ubuntu authentication failures
+- [x] Analyze Wazuh rule IDs
+- [x] Analyze alert severity
 - [x] Review MITRE ATT&CK context
 - [x] Investigate Windows process telemetry
 - [x] Validate File Integrity Monitoring
-- [x] Detect controlled file creation
-- [x] Detect controlled file modification
-- [x] Review FIM hashes and metadata
+- [x] Generate controlled file activity
+- [x] Analyze FIM alerts
+- [x] Review file metadata and hashes
 - [x] Correlate related security events
 - [x] Troubleshoot Wazuh Dashboard connectivity
 
@@ -185,32 +203,30 @@ SOC Analyst
 
 # ⚙️ Wazuh Platform Validation
 
-Wazuh was deployed on the dedicated **SOC-Wazuh** virtual machine.
-
-The platform provides the centralized security-monitoring layer for the lab.
+The dedicated **SOC-Wazuh** virtual machine provides centralized SIEM/XDR services for the lab.
 
 Core components include:
 
 ```text
 Wazuh Dashboard
-      │
-      ▼
+       │
+       ▼
 Wazuh Manager
-      │
-      ▼
+       │
+       ▼
 Wazuh Indexer
-      ▲
-      │
-   Filebeat
+       ▲
+       │
+    Filebeat
 ```
 
-The Wazuh Dashboard is accessible from:
+The Wazuh Dashboard is accessed through:
 
 ```text
 https://10.10.10.102
 ```
 
-The environment uses a self-signed certificate.
+The lab environment uses a self-signed certificate.
 
 ---
 
@@ -218,15 +234,25 @@ The environment uses a self-signed certificate.
 
 ![Wazuh Dashboard](../images/phase4-dashboard.png)
 
-The dashboard provides centralized visibility into endpoint alerts and security events.
+The dashboard provides centralized access to endpoint security telemetry, alerts, agent information, and investigation data.
 
-**Result:** ✅ Wazuh Dashboard operational.
+**Result:** ✅ Wazuh SIEM/XDR dashboard operational.
+
+---
+
+## 📸 Evidence — Wazuh Security Dashboard
+
+![Wazuh Security Dashboard](../images/phase4-wazuh-dashboard.png)
+
+This additional dashboard view demonstrates the operational Wazuh security environment used during Phase 4 investigations.
+
+**Result:** ✅ Centralized security-monitoring interface validated.
 
 ---
 
 # 🔗 Connected Agents
 
-Both monitored endpoints were successfully connected to Wazuh.
+Both monitored endpoints were connected to Wazuh.
 
 The Wazuh environment showed:
 
@@ -249,32 +275,30 @@ soc-ubuntu
       └── ACTIVE
 ```
 
-This validated the endpoint telemetry infrastructure established during Phase 3.
+This validated the endpoint monitoring infrastructure established in Phase 3.
 
 ---
 
 ## 📸 Evidence — Connected Wazuh Agents
 
-![Wazuh Connected Agents](../images/phase4-agents.png)
+![Connected Wazuh Agents](../images/phase4-agents.png)
 
-**Result:** ✅ Both monitored endpoints successfully connected to Wazuh.
+**Result:** ✅ Windows and Ubuntu endpoints successfully connected to Wazuh.
 
 ---
 
 # 🚨 Ubuntu Authentication Investigation
 
-Controlled authentication failures from the Ubuntu endpoint were investigated through Wazuh.
+Controlled authentication failures were generated on SOC-Ubuntu and investigated through Wazuh.
 
-The Linux endpoint:
+The monitored endpoint was:
 
 ```text
-soc-ubuntu
-10.50.20.100
+Hostname: soc-ubuntu
+IP:       10.50.20.100
 ```
 
-generated authentication telemetry that was forwarded through the Wazuh Agent.
-
-The resulting alert identified:
+The resulting Wazuh detection included:
 
 ```text
 Rule ID:     5503
@@ -291,7 +315,7 @@ Authentication Failure
 Linux PAM
         │
         ▼
-Linux Security Log
+Linux Authentication Log
         │
         ▼
 Wazuh Agent
@@ -309,97 +333,110 @@ Level 5 Alert
 SOC Investigation
 ```
 
-This demonstrated that Wazuh could transform raw authentication telemetry into a security alert suitable for analyst investigation.
-
----
-
-## Alert Analysis
+The alert was expanded and investigated instead of relying only on the alert title.
 
 The investigation included:
 
 - Agent name
 - Endpoint IP
 - Rule ID
-- Rule level
+- Rule severity
 - Rule description
 - Authentication information
 - Event timestamp
 - Associated security context
 
-Instead of looking only at the alert title, the event was expanded to understand the underlying context.
+---
+
+## 📸 Evidence — Authentication Investigation
+
+![Wazuh Authentication Investigation](../images/phase4-authentication-investigation.png)
+
+This evidence demonstrates investigation of the Linux authentication event inside Wazuh.
+
+**Result:** ✅ Linux authentication failures detected and investigated.
 
 ---
 
 # 🗺️ MITRE ATT&CK Analysis
 
-Wazuh provides MITRE ATT&CK context for supported detections.
+The authentication event was also reviewed using its associated MITRE ATT&CK context.
 
-This allows the analyst to move from:
-
-```text
-What happened?
-```
-
-to:
-
-```text
-What type of adversary behavior could this activity represent?
-```
+MITRE ATT&CK provides a standardized way to categorize behaviors associated with adversary tactics and techniques.
 
 The investigation process became:
 
 ```text
-Raw Event
-    │
-    ▼
-Wazuh Detection
-    │
-    ▼
-Rule / Severity
-    │
-    ▼
-MITRE ATT&CK Context
-    │
-    ▼
-Analyst Interpretation
+Raw Authentication Event
+          │
+          ▼
+     Wazuh Detection
+          │
+          ▼
+     Rule / Severity
+          │
+          ▼
+   MITRE ATT&CK Context
+          │
+          ▼
+    Analyst Analysis
 ```
 
-MITRE ATT&CK mapping does not automatically prove malicious intent.
+MITRE ATT&CK context helps answer:
 
-Instead, it provides a standardized framework for understanding how detected behavior may relate to known adversary techniques.
+```text
+What happened?
+      +
+What type of security behavior
+could this activity represent?
+```
+
+MITRE mapping does not automatically prove malicious activity.
+
+The analyst still evaluates the event using the surrounding context.
+
+---
+
+## 📸 Evidence — MITRE ATT&CK Mapping
+
+![Authentication MITRE ATT&CK Analysis](../images/phase4-authentication-mitre.png)
+
+The authentication detection was reviewed alongside its MITRE ATT&CK information to add standardized security context.
+
+**Result:** ✅ MITRE ATT&CK context successfully incorporated into the investigation.
 
 ---
 
 # 🪟 Windows Process Investigation
 
-Windows process telemetry generated during Phase 3 was investigated through Wazuh.
+Windows process telemetry configured during Phase 3 was investigated through Wazuh.
 
-The Windows endpoint provides multiple telemetry sources:
+The Windows endpoint provided telemetry from:
 
 ```text
 Windows Security Auditing
-        +
-Sysmon
-        +
+          +
+       Sysmon
+          +
 PowerShell Logging
-        +
-Wazuh Agent
+          +
+     Wazuh Agent
 ```
 
-A Windows process event was analyzed through Wazuh using:
+A Windows process event was investigated using Wazuh detection telemetry associated with:
 
 ```text
 Rule 67027
 ```
 
-The investigation focused on:
+The investigation included:
 
 - Endpoint
 - User
 - Process
 - Parent process
 - Command line
-- Event timestamp
+- Timestamp
 - Wazuh rule
 - Associated event context
 
@@ -412,18 +449,28 @@ Collecting Logs
 and:
 
 ```text
-Investigating Security Telemetry
+Analyzing Endpoint Activity
 ```
+
+---
+
+## 📸 Evidence — Windows Process Investigation
+
+![Windows Process Investigation](../images/phase4-windows-process-investigation.png)
+
+This evidence demonstrates investigation of Windows process activity through the centralized Wazuh platform.
+
+**Result:** ✅ Windows process telemetry successfully investigated.
 
 ---
 
 # 📁 File Integrity Monitoring
 
-File Integrity Monitoring was validated using controlled file activity.
+Wazuh File Integrity Monitoring was validated using controlled file activity.
 
-FIM allows Wazuh to monitor important files and directories for changes.
+FIM provides visibility into changes made to monitored files and directories.
 
-The controlled validation included:
+The controlled test followed this workflow:
 
 ```text
 Create File
@@ -432,7 +479,7 @@ Create File
 Wazuh FIM
     │
     ▼
-Detect Change
+Detect File
     │
     ▼
 Generate Alert
@@ -441,54 +488,85 @@ Generate Alert
 Modify File
     │
     ▼
-Detect New Change
+Detect Change
     │
     ▼
-Compare Metadata / Hash
+Analyze Metadata
 ```
 
-Wazuh successfully generated FIM telemetry for the controlled changes.
-
-The investigation included:
-
-- File path
-- File event
-- Modification information
-- Hash information
-- Metadata
-- Rule information
-
-The FIM alert was associated with:
+The FIM event was associated with:
 
 ```text
 Rule ID: 554
 ```
 
-This demonstrated that Wazuh could identify changes to monitored files rather than relying only on process or authentication telemetry.
+The investigation included:
+
+- File path
+- File event type
+- Modification information
+- File metadata
+- Hash information
+- Rule information
+
+---
+
+## 📸 Evidence — Controlled FIM Detection
+
+![Controlled FIM Detection](../images/phase4-fim-controlled-detection.png)
+
+This evidence demonstrates that Wazuh detected the controlled file activity.
+
+**Result:** ✅ Controlled file changes successfully detected.
+
+---
+
+## 📸 Evidence — FIM Alert Analysis
+
+![FIM Alert Analysis](../images/phase4-fim-alert-analysis.png)
+
+The FIM alert was expanded and analyzed to review detailed information associated with the file change.
+
+This provided visibility into:
+
+```text
+File
+  │
+  ├── Path
+  ├── Event
+  ├── Metadata
+  ├── Hash
+  └── Wazuh Rule
+```
+
+**Result:** ✅ File Integrity Monitoring alert successfully investigated.
 
 ---
 
 # 🔗 Event Correlation
 
-Individual alerts become more useful when they are examined together.
+Phase 4 also demonstrated the value of correlating multiple security events.
 
-Phase 4 correlated multiple security-data sources:
+Instead of investigating each event independently, related telemetry was reviewed together.
 
 ```text
 Authentication Activity
           +
-Process Activity
+Windows Process Activity
           +
-File Changes
+File Integrity Activity
           │
           ▼
-      Wazuh SIEM
+       Wazuh SIEM
           │
           ▼
- Analyst Investigation
+    Event Correlation
+          │
+          ▼
+   Analyst Investigation
 ```
 
-The analyst reviewed:
+Correlation included reviewing:
 
 - Event timestamps
 - Agent information
@@ -500,19 +578,27 @@ The analyst reviewed:
 - File information
 - Related endpoint activity
 
-This demonstrated a core SOC concept:
+This provides a more complete understanding of endpoint behavior.
 
-> A single event may provide limited context, while multiple related events can provide a clearer picture of endpoint activity.
+---
+
+## 📸 Evidence — Event Correlation
+
+![Wazuh Event Correlation](../images/phase4-event-correlation.png)
+
+The correlated Wazuh telemetry demonstrates how multiple events can be reviewed together during a SOC investigation.
+
+**Result:** ✅ Multiple security events successfully correlated.
 
 ---
 
 # 💻 Commands Used
 
-The following commands were used to validate and troubleshoot the Wazuh platform during Phase 4.
+The following commands were used during Phase 4 to validate, troubleshoot, and recover Wazuh services.
 
 ---
 
-## 🛡️ Check Wazuh Indexer
+## Check Wazuh Indexer
 
 ```bash
 sudo systemctl status wazuh-indexer
@@ -524,11 +610,11 @@ Expected:
 active (running)
 ```
 
-The Wazuh Indexer stores and indexes security data used by the platform.
+The Wazuh Indexer stores and indexes security-event data.
 
 ---
 
-## ⚙️ Check Wazuh Manager
+## Check Wazuh Manager
 
 ```bash
 sudo systemctl status wazuh-manager
@@ -540,11 +626,11 @@ Expected:
 active (running)
 ```
 
-The Wazuh Manager receives and analyzes security telemetry from connected agents.
+The Wazuh Manager receives and analyzes telemetry from connected agents.
 
 ---
 
-## 🖥️ Check Wazuh Dashboard
+## Check Wazuh Dashboard
 
 ```bash
 sudo systemctl status wazuh-dashboard
@@ -556,11 +642,11 @@ Expected:
 active (running)
 ```
 
-This verifies the web interface used by the SOC analyst.
+This validates the web interface used by the analyst.
 
 ---
 
-## 📡 Check Filebeat
+## Check Filebeat
 
 ```bash
 sudo systemctl status filebeat
@@ -572,37 +658,42 @@ Expected:
 active (running)
 ```
 
-Filebeat participates in the Wazuh data pipeline.
+Filebeat participates in the Wazuh event-processing pipeline.
 
 ---
 
-## 🧪 Test Filebeat Output
+## Test Filebeat Output
 
 ```bash
 sudo filebeat test output
 ```
 
-The test validates:
+This validates the Filebeat communication path.
+
+The test checks:
 
 ```text
 URL Parsing
-     ↓
+     │
+     ▼
 Host Parsing
-     ↓
+     │
+     ▼
 DNS Lookup
-     ↓
+     │
+     ▼
 TCP Connection
-     ↓
+     │
+     ▼
 TLS Handshake
-     ↓
+     │
+     ▼
 Server Communication
 ```
 
-A successful result provides evidence that Filebeat can communicate with the configured indexer.
-
 ---
 
-## 🌐 Check Wazuh API Port
+## Check Wazuh API Port
 
 ```bash
 sudo ss -lntp | grep 55000
@@ -611,23 +702,25 @@ sudo ss -lntp | grep 55000
 Command breakdown:
 
 ```text
-ss            Display network sockets
+ss            Display sockets
 -l            Listening sockets
--n            Numeric addresses and ports
+-n            Numeric addresses/ports
 -t            TCP sockets
 -p            Process information
-grep 55000    Filter for Wazuh API port
+grep 55000    Filter Wazuh API port
 ```
 
-The Wazuh API uses:
+The Wazuh API port:
 
 ```text
-TCP 55000
+55000
 ```
+
+was confirmed listening during troubleshooting.
 
 ---
 
-## 🔄 Restart Wazuh Dashboard
+## Restart Wazuh Dashboard
 
 ```bash
 sudo systemctl restart wazuh-dashboard
@@ -637,115 +730,75 @@ Only the affected dashboard service was restarted instead of rebooting the entir
 
 ---
 
-## 📋 Command Reference
+## Command Reference
 
 | Purpose | Command |
 |---|---|
-| Check Indexer | `sudo systemctl status wazuh-indexer` |
-| Check Manager | `sudo systemctl status wazuh-manager` |
-| Check Dashboard | `sudo systemctl status wazuh-dashboard` |
+| Check Wazuh Indexer | `sudo systemctl status wazuh-indexer` |
+| Check Wazuh Manager | `sudo systemctl status wazuh-manager` |
+| Check Wazuh Dashboard | `sudo systemctl status wazuh-dashboard` |
 | Check Filebeat | `sudo systemctl status filebeat` |
 | Test Filebeat output | `sudo filebeat test output` |
-| Check API port | `sudo ss -lntp \| grep 55000` |
+| Check Wazuh API | `sudo ss -lntp \| grep 55000` |
 | Restart Dashboard | `sudo systemctl restart wazuh-dashboard` |
 
 ---
 
 # 🧪 Validation
 
-Phase 4 validated the complete centralized security-monitoring workflow.
+Phase 4 validated multiple detection and investigation capabilities.
 
----
+| Test | Result |
+|---|---|
+| Wazuh Dashboard | ✅ Operational |
+| Windows Agent | ✅ Active |
+| Ubuntu Agent | ✅ Active |
+| Linux Authentication Detection | ✅ Rule `5503` |
+| MITRE ATT&CK Context | ✅ Validated |
+| Windows Process Detection | ✅ Rule `67027` |
+| File Integrity Monitoring | ✅ Rule `554` |
+| Event Correlation | ✅ Validated |
+| SIEM Troubleshooting | ✅ Completed |
 
-## Endpoint Connectivity
-
-Both monitored endpoints were active:
-
-```text
-SOC-Windows11 ───► Wazuh
-                     ▲
-                     │
-soc-ubuntu ──────────┘
-
-2 Active Agents
-0 Disconnected
-```
-
-**Result:** ✅ Endpoint communication validated.
-
----
-
-## Authentication Detection
-
-Ubuntu authentication failures generated:
+The complete validation workflow demonstrated:
 
 ```text
-Rule 5503
-Level 5
-PAM: User login failed
+Generate Activity
+       │
+       ▼
+Collect Telemetry
+       │
+       ▼
+Forward to Wazuh
+       │
+       ▼
+Apply Detection Rule
+       │
+       ▼
+Generate Alert
+       │
+       ▼
+Investigate Alert
+       │
+       ▼
+Add Security Context
+       │
+       ▼
+Correlate Events
+       │
+       ▼
+Document Finding
+
+       ✅
 ```
-
-**Result:** ✅ Linux authentication detection validated.
-
----
-
-## Windows Process Detection
-
-Windows process activity was visible through Wazuh and associated with:
-
-```text
-Rule 67027
-```
-
-**Result:** ✅ Windows process investigation validated.
-
----
-
-## File Integrity Monitoring
-
-Controlled file creation and modification generated FIM telemetry associated with:
-
-```text
-Rule 554
-```
-
-**Result:** ✅ File Integrity Monitoring validated.
-
----
-
-# 🚨 Wazuh Security Alerts
-
-The Wazuh Security Events interface was used to review centralized endpoint detections.
-
-This view allowed the analyst to:
-
-- Review alert severity
-- Identify the affected endpoint
-- Review Wazuh rule information
-- Examine timestamps
-- Expand individual events
-- Investigate event details
-- Search related telemetry
-
----
-
-## 📸 Evidence — Wazuh Security Alerts
-
-![Wazuh Security Alerts](../images/phase4-alerts.png)
-
-The security-alert view provided centralized visibility into endpoint detections and allowed individual events to be expanded for investigation.
-
-**Result:** ✅ Security alerts successfully generated and investigated.
 
 ---
 
 # 🔧 Troubleshooting
 
-Phase 4 included significant Wazuh platform troubleshooting.
+Phase 4 included troubleshooting of the Wazuh platform itself.
 
-This was important because a SIEM contains multiple interconnected components.
-
-A problem in the web interface does not automatically mean the entire SIEM is unavailable.
+This was important because Wazuh consists of multiple interconnected services.
 
 ---
 
@@ -757,9 +810,9 @@ At one point, the Wazuh Dashboard displayed:
 Something went wrong.
 ```
 
-Instead of reinstalling Wazuh, each platform component was checked independently.
+Instead of reinstalling the entire Wazuh platform, each component was checked independently.
 
-### Check Indexer
+### Indexer
 
 ```bash
 sudo systemctl status wazuh-indexer
@@ -771,7 +824,7 @@ Result:
 active (running)
 ```
 
-### Check Dashboard
+### Dashboard
 
 ```bash
 sudo systemctl status wazuh-dashboard
@@ -783,7 +836,7 @@ Result:
 active (running)
 ```
 
-### Check Manager
+### Manager
 
 ```bash
 sudo systemctl status wazuh-manager
@@ -795,7 +848,7 @@ Result:
 active (running)
 ```
 
-### Check Filebeat
+### Filebeat
 
 ```bash
 sudo systemctl status filebeat
@@ -807,13 +860,13 @@ Result:
 active (running)
 ```
 
-This demonstrated that the core Wazuh services were operational even though the web interface displayed an error.
+This demonstrated that the underlying Wazuh services remained operational even though the web interface displayed an error.
 
 ---
 
 ## Filebeat Pipeline Validation
 
-The next troubleshooting step was:
+The data pipeline was then tested:
 
 ```bash
 sudo filebeat test output
@@ -828,7 +881,7 @@ The test successfully validated:
 - TLS handshake
 - Server communication
 
-This provided evidence that the data pipeline could communicate with the indexer.
+This showed that Filebeat could still communicate with the Wazuh Indexer.
 
 ---
 
@@ -848,11 +901,11 @@ Port:
 
 was listening.
 
-This provided another layer of evidence that the Wazuh environment remained operational.
+This provided additional evidence that the Wazuh environment remained operational.
 
 ---
 
-## Targeted Service Restart
+## Targeted Dashboard Recovery
 
 Instead of rebooting the entire server, only the dashboard service was restarted:
 
@@ -884,144 +937,155 @@ Check Dashboard
 Check Filebeat
       │
       ▼
-Test Data Pipeline
+Test Filebeat Pipeline
       │
       ▼
 Check API Port
       │
       ▼
-Restart Only Affected Service
+Restart Affected Service
       │
       ▼
-Validate Again
+Validate Dashboard
 ```
 
-This avoided unnecessary reinstallation of the security platform.
+This avoided unnecessary reinstallation of the platform.
 
 ---
 
 # 💡 Lessons Learned
 
-## 1. A Dashboard Error Does Not Mean the Entire SIEM Failed
+## 1. A Dashboard Error Does Not Mean the SIEM Failed
 
-When the Wazuh Dashboard showed an error, the underlying services remained operational.
+A problem with the Wazuh Dashboard did not mean that the Manager, Indexer, Filebeat, or endpoint agents had failed.
 
-The correct response was to validate each component rather than immediately reinstall the platform.
+Each component must be validated independently.
 
 ---
 
-## 2. Troubleshoot Complex Platforms by Component
-
-Wazuh consists of multiple interconnected services.
+## 2. Troubleshoot Complex Security Platforms by Layer
 
 ```text
 Dashboard
-   +
+    │
+    ▼
 Manager
-   +
+    │
+    ▼
 Indexer
-   +
+    │
+    ▼
 Filebeat
+    │
+    ▼
+Network
+    │
+    ▼
+Endpoint Agent
 ```
 
-Each component should be checked independently.
+Checking one layer at a time makes complex SIEM troubleshooting more manageable.
 
 ---
 
-## 3. Detection Requires Context
+## 3. Alerts Require Investigation
 
-An alert by itself does not provide a complete investigation.
-
-Useful context includes:
+An alert is the beginning of the analyst workflow, not the end.
 
 ```text
-Who?
-What?
-When?
-Where?
-Which endpoint?
-Which rule?
-What severity?
-What process?
-What file?
-What MITRE technique?
-What happened before and after?
+Alert
+  │
+  ▼
+Rule
+  │
+  ▼
+Severity
+  │
+  ▼
+Endpoint
+  │
+  ▼
+Raw Event
+  │
+  ▼
+Context
+  │
+  ▼
+Finding
 ```
 
 ---
 
-## 4. MITRE ATT&CK Adds Context, Not Proof
+## 4. MITRE ATT&CK Provides Context
 
-MITRE ATT&CK mapping helps categorize behavior.
+MITRE ATT&CK helps categorize behavior using standardized tactics and techniques.
 
-It does not automatically mean that every mapped event represents a real attack.
+It does not automatically prove malicious intent.
 
-The analyst must still evaluate the activity in context.
+The analyst must evaluate the evidence.
 
 ---
 
-## 5. File Integrity Monitoring Adds Another Detection Layer
-
-Authentication, process monitoring, and FIM answer different security questions.
+## 5. Different Telemetry Answers Different Questions
 
 ```text
-Authentication
-     │
-     ▼
+Authentication Logs
+        │
+        ▼
 Who attempted access?
 
 
-Process Monitoring
-     │
-     ▼
+Process Telemetry
+        │
+        ▼
 What executed?
 
 
 File Integrity Monitoring
-     │
-     ▼
-What file changed?
+        │
+        ▼
+What changed?
 ```
 
-Combining these sources improves investigation quality.
+Combining these sources provides stronger investigation context.
 
 ---
 
 ## 6. Controlled Testing Proves Detection Capability
 
-A configuration screen alone does not prove a detection capability works.
+A configured feature does not prove that the detection works.
 
-A stronger validation method is:
+The stronger approach is:
 
 ```text
 Configure
-    │
-    ▼
+   │
+   ▼
 Generate Controlled Activity
-    │
-    ▼
+   │
+   ▼
 Detect
-    │
-    ▼
+   │
+   ▼
 Investigate
-    │
-    ▼
+   │
+   ▼
 Validate Evidence
 ```
 
 ---
 
-## 7. Correlation Provides Better Context
+## 7. Correlation Improves Investigation Quality
 
-Multiple related events provide a more complete view of endpoint activity than isolated alerts.
+Individual alerts can provide limited information.
 
-This is one of the primary benefits of centralized SIEM monitoring.
+Correlating related events helps analysts understand the broader activity occurring on an endpoint.
 
 ---
 
 # 🧭 SOC Investigation Methodology
 
-Phase 4 established a repeatable analyst workflow:
+Phase 4 established a repeatable SOC investigation process:
 
 ```text
 Alert
@@ -1064,38 +1128,38 @@ This methodology became the foundation for later incident-response phases.
 | **Linux Authentication Analysis** | Investigated PAM authentication failures |
 | **Windows Event Analysis** | Investigated Windows process activity |
 | **Detection Analysis** | Reviewed Wazuh rule IDs and severity |
-| **MITRE ATT&CK** | Added standardized adversary-behavior context |
+| **MITRE ATT&CK** | Added standardized security context |
 | **File Integrity Monitoring** | Detected controlled file changes |
-| **Hash Analysis** | Reviewed file-change metadata and hashes |
-| **Event Correlation** | Connected related endpoint activity |
+| **Hash Analysis** | Reviewed file-change metadata |
+| **Event Correlation** | Connected related security telemetry |
 | **SOC Investigation** | Followed alert-to-investigation workflow |
-| **Linux Administration** | Validated Wazuh services with systemd |
-| **Network Troubleshooting** | Checked API listening ports |
+| **Linux Administration** | Validated Wazuh services |
+| **Network Troubleshooting** | Checked Wazuh API connectivity |
 | **Pipeline Validation** | Tested Filebeat output |
-| **Service Recovery** | Restarted only the affected dashboard service |
+| **Service Recovery** | Recovered Wazuh Dashboard |
 | **Troubleshooting** | Diagnosed a multi-component SIEM platform |
 
 ---
 
 # 📸 Evidence Summary
 
-The original Phase 4 screenshots are reused in this reorganized documentation.
+Phase 4 contains **nine original screenshots** documenting the SIEM/XDR investigation workflow.
 
-| # | Evidence | Existing Screenshot |
+| # | Evidence | Screenshot |
 |---|---|---|
-| 1 | Wazuh Dashboard | `phase4-dashboard.png` |
-| 2 | Connected Wazuh Agents | `phase4-agents.png` |
-| 3 | Wazuh Security Alerts | `phase4-alerts.png` |
+| 1 | Connected Wazuh Agents | `phase4-agents.png` |
+| 2 | Authentication Investigation | `phase4-authentication-investigation.png` |
+| 3 | MITRE ATT&CK Authentication Analysis | `phase4-authentication-mitre.png` |
+| 4 | Wazuh Dashboard | `phase4-dashboard.png` |
+| 5 | Event Correlation | `phase4-event-correlation.png` |
+| 6 | FIM Alert Analysis | `phase4-fim-alert-analysis.png` |
+| 7 | Controlled FIM Detection | `phase4-fim-controlled-detection.png` |
+| 8 | Wazuh Security Dashboard | `phase4-wazuh-dashboard.png` |
+| 9 | Windows Process Investigation | `phase4-windows-process-investigation.png` |
 
-### Image Paths Used
+All evidence uses the existing `/images` directory.
 
-```text
-../images/phase4-dashboard.png
-../images/phase4-agents.png
-../images/phase4-alerts.png
-```
-
-No duplicate screenshots are required.
+No screenshots were renamed or duplicated.
 
 ---
 
@@ -1107,24 +1171,24 @@ Phase 4 successfully demonstrated centralized SIEM/XDR monitoring and SOC invest
 
 The completed work included:
 
-- Centralized Windows security monitoring
-- Centralized Linux security monitoring
-- Wazuh service validation
-- Authentication-failure investigation
-- Wazuh rule and severity analysis
-- MITRE ATT&CK mapping
+- Centralized Windows monitoring
+- Centralized Linux monitoring
+- Wazuh platform validation
+- Agent connectivity validation
+- Linux authentication investigation
+- Rule and severity analysis
+- MITRE ATT&CK analysis
 - Windows process investigation
-- Controlled File Integrity Monitoring
-- File creation detection
-- File modification detection
-- File hash and metadata analysis
-- Event-context investigation
-- SOC-style alert correlation
-- Security-agent troubleshooting
-- Wazuh platform troubleshooting
-- Layered SIEM connectivity troubleshooting
+- File Integrity Monitoring
+- Controlled FIM testing
+- FIM alert analysis
+- Event correlation
+- Wazuh service troubleshooting
+- Filebeat pipeline validation
+- Wazuh API validation
+- Targeted dashboard recovery
 
-The completed workflow was:
+The complete Phase 4 workflow was:
 
 ```text
 Endpoint Activity
@@ -1139,29 +1203,32 @@ Wazuh Agent
 Wazuh Manager
        │
        ▼
-Detection Rules
+Detection Rule
        │
        ▼
 Security Alert
        │
        ▼
-Analyst Investigation
+SOC Investigation
        │
-       ▼
-MITRE ATT&CK Context
-       │
-       ▼
-Event Correlation
-       │
-       ▼
-Document Findings
+       ├─────────────┐
+       ▼             ▼
+MITRE Context    Related Events
+       │             │
+       └──────┬──────┘
+              │
+              ▼
+        Event Correlation
+              │
+              ▼
+       Analyst Finding
 
-       ✅
+             ✅
 ```
 
-Phase 4 moved the project beyond basic log collection and into centralized security monitoring and investigation.
+Phase 4 moved the project beyond log collection into **centralized security detection, analysis, investigation, and correlation**.
 
-The Wazuh SIEM/XDR environment was now ready to integrate network-based detection through Suricata.
+The SIEM/XDR environment was now ready to incorporate network-based intrusion detection.
 
 ---
 
@@ -1169,19 +1236,20 @@ The Wazuh SIEM/XDR environment was now ready to integrate network-based detectio
 
 ## Phase 05 — Suricata IDS/IPS
 
-Phase 5 introduces network intrusion detection using Suricata on OPNsense.
+Phase 5 expands the SOC environment from endpoint-based detection into network-based intrusion detection.
 
 The next phase includes:
 
-- Suricata configuration
+- Suricata deployment on OPNsense
 - ET Open rules
 - IDS/IPS monitoring
 - Controlled Nmap reconnaissance
 - Kali-to-Ubuntu traffic generation
-- Custom detection rules
-- EVE event analysis
+- Custom Suricata rules
+- HTTP detection
+- Reconnaissance detection
 - Alert validation
-- IDS troubleshooting
+- Suricata service troubleshooting
 
 ---
 
@@ -1191,4 +1259,4 @@ The next phase includes:
 
 ### Enterprise Security Operations Lab
 
-**SOC Operations • SIEM/XDR • Detection Engineering • Endpoint Security • Network Security • Incident Response**
+**SOC Operations • SIEM/XDR • Detection Engineering • Endpoint Security • MITRE ATT&CK • Incident Response**
