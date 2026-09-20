@@ -1,497 +1,708 @@
-# Phase 01 — VirtualBox Enterprise Environment
+# 🖥️ Phase 01 — VirtualBox Enterprise Environment
 
-[← Back to Main Project](../README.md)
+> **Objective:** Build and validate the five-VM virtual infrastructure and networking foundation for the Enterprise Security Operations Lab.
 
----
-
-## Overview
-
-Phase 1 established the virtualization and network foundation for the Enterprise Security Operations Lab.
-
-VirtualBox provides the virtualization platform for the project, with five primary virtual machines representing the firewall, Windows endpoint, Linux endpoint, centralized security server, and SOC analyst workstation.
-
-The objective of this phase was to build and validate the base infrastructure before deploying the security monitoring and incident-response technologies used in later phases.
+[🏠 Main Project](../README.md) | [Next: Phase 02 →](phase-02-network-segmentation.md)
 
 ---
 
-## Five-VM Architecture
+## 📑 Table of Contents
 
-### VM 1 — SOC-OPNsense
+- [Phase Summary](#-phase-summary)
+- [Overview](#-overview)
+- [Lab Architecture](#️-lab-architecture)
+- [Virtual Machine Roles](#-virtual-machine-roles)
+- [Network Architecture](#-network-architecture)
+- [Phase Objectives](#-phase-objectives)
+- [Implementation](#️-implementation)
+- [Validation](#-validation)
+- [Troubleshooting](#-troubleshooting)
+- [Lessons Learned](#-lessons-learned)
+- [Skills Demonstrated](#-skills-demonstrated)
+- [Evidence Summary](#-evidence-summary)
+- [Phase Outcome](#-phase-outcome)
 
-Primary role:
+---
 
-- Firewall
+# 📊 Phase Summary
+
+| Category | Details |
+|---|---|
+| **Status** | ✅ Complete |
+| **Platform** | Oracle VirtualBox |
+| **Primary Systems** | OPNsense, Windows 11, Ubuntu, Wazuh, Kali Linux |
+| **Security LAN** | `10.10.10.0/24` |
+| **DMZ** | `10.50.20.0/24` |
+| **Gateway** | `10.10.10.1` |
+| **Focus** | Virtualization & Network Infrastructure |
+| **Next Phase** | OPNsense Firewall & Network Segmentation |
+
+---
+
+# 📋 Overview
+
+Phase 1 established the virtualization and networking foundation for the **Enterprise Security Operations Lab**.
+
+The environment was designed around five primary virtual machines representing the major components of a small enterprise Security Operations Center:
+
+```text
+Firewall / Network Security
+          ↓
+Enterprise Endpoints
+          ↓
+Centralized Security Monitoring
+          ↓
+SOC Analyst Workstation
+```
+
+VirtualBox was used as the virtualization platform, while OPNsense was positioned as the central firewall and network gateway.
+
+The purpose of this phase was to ensure that the underlying infrastructure was operational **before security monitoring, detection, automation, and incident-response technologies were introduced**.
+
+---
+
+# 🏗️ Lab Architecture
+
+The lab was designed around five primary virtual machines.
+
+```text
+                         INTERNET
+                            │
+                            ▼
+                     ┌─────────────┐
+                     │ SOC-OPNsense│
+                     │ Firewall    │
+                     │ NAT/Routing │
+                     └──────┬──────┘
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+              ▼                           ▼
+        SOC-LAN / SECURITY LAN          SOC-DMZ
+           10.10.10.0/24             10.50.20.0/24
+              │                           │
+       ┌──────┼─────────┐                 │
+       │      │         │                 │
+       ▼      ▼         ▼                 ▼
+   Windows   Kali     Wazuh             Ubuntu
+   Endpoint  Analyst  SIEM/XDR          Endpoint
+```
+
+This architecture created the foundation for later phases involving:
+
+- Firewall segmentation
+- Endpoint monitoring
+- Wazuh SIEM/XDR
+- Suricata IDS/IPS
+- Vulnerability assessment
+- Threat hunting
+- Security automation
+- Centralized logging
+- Incident response
+- Web application security testing
+
+---
+
+# 💻 Virtual Machine Roles
+
+## 🛡️ SOC-OPNsense
+
+**Primary Role:** Firewall and network security gateway
+
+Responsibilities:
+
+- Firewall enforcement
 - Routing
 - NAT
 - Network segmentation
+- DHCP
 - Suricata IDS/IPS
 
-### VM 2 — SOC-Windows11
+---
 
-Primary role:
+## 🪟 SOC-Windows11
 
-- Windows enterprise endpoint
-- Sysmon
-- Wazuh Agent
+**Primary Role:** Windows enterprise endpoint
+
+Security capabilities introduced throughout the project include:
+
 - Windows Event Logs
+- Sysmon
 - PowerShell logging
+- Wazuh Agent
+- Endpoint monitoring
 
-### VM 3 — SOC-Ubuntu
+---
 
-Primary role:
+## 🐧 SOC-Ubuntu
 
-- Linux endpoint
+**Primary Role:** Linux endpoint and controlled security-testing target
+
+Security capabilities include:
+
 - auditd
 - osquery
 - Wazuh Agent
-- Controlled vulnerable web application
+- Apache
+- Controlled vulnerable web applications
 
-### VM 4 — SOC-Wazuh
+---
 
-Primary role:
+## 📊 SOC-Wazuh
+
+**Primary Role:** Centralized security monitoring server
+
+The system later provides:
 
 - Wazuh SIEM/XDR
+- Security event collection
+- Detection and correlation
 - PostgreSQL
 - SecurityOpsDB
 - Python security automation
 
-### VM 5 — SOC-Kali
+---
 
-Primary role:
+## 🐉 SOC-Kali
 
-- SOC analyst workstation
+**Primary Role:** SOC analyst and controlled security-testing workstation
+
+Tools used throughout the project include:
+
 - Nmap
 - Wireshark
 - OWASP ZAP
+- Nikto
 - YARA
 - Volatility 3
+- Python
+- DFIR-IRIS
 
 ---
 
-## Network Architecture
+# 🌐 Network Architecture
 
-The lab was designed around multiple VirtualBox network segments controlled by OPNsense.
+The lab uses multiple network segments controlled through OPNsense.
 
-### Security LAN
-
-```text
-Network: 10.10.10.0/24
-Gateway: 10.10.10.1
-VirtualBox Network: SOC-LAN
-```
-
-### DMZ
+## Security LAN
 
 ```text
-Network: 10.50.20.0/24
-Gateway: 10.50.20.1
+Network:  10.10.10.0/24
+Gateway:  10.10.10.1
+Purpose:  Internal SOC systems
 ```
 
-The DMZ provides an isolated network for controlled security testing and monitored services.
+The Security LAN provides internal connectivity for systems such as:
 
-### WAN
+- SOC-Windows11
+- SOC-Kali
+- SOC-Wazuh
+
+---
+
+## DMZ
+
+```text
+Network:  10.50.20.0/24
+Purpose:  Isolated monitored services and security-testing targets
+```
+
+SOC-Ubuntu operates within the DMZ.
+
+The DMZ becomes important during later phases because controlled security activity can be generated from the Security LAN toward an isolated target while monitoring the traffic through the security stack.
+
+---
+
+## WAN
 
 OPNsense uses VirtualBox NAT for external connectivity.
 
 ```text
-WAN: VirtualBox NAT
-OPNsense WAN: 10.0.2.15/24
+WAN
+ │
+ ▼
+OPNsense
+ │
+ ├── SOC-LAN
+ │
+ └── SOC-DMZ
 ```
+
+This allows internal systems to access required external resources while maintaining centralized routing through the firewall.
 
 ---
 
-## Architecture
-
-```text
-                         INTERNET
-                            |
-                            v
-                     SOC-OPNsense
-                 Firewall / NAT / Routing
-                            |
-              +-------------+-------------+
-              |                           |
-              v                           v
-         SECURITY LAN                    DMZ
-         10.10.10.0/24              10.50.20.0/24
-              |                           |
-       +------+------+                    |
-       |             |                    |
-       v             v                    v
- SOC-Windows11   SOC-Kali            SOC-Ubuntu
-   Endpoint      Analyst              Endpoint
-       |             |                    |
-       +-------------+--------------------+
-                     |
-                     v
-                 SOC-Wazuh
-                 SIEM / XDR
-```
-
----
-
-## Phase Objectives
+# 🎯 Phase Objectives
 
 The primary objectives for Phase 1 were:
 
-- [x] Install VirtualBox
+- [x] Install and configure VirtualBox
 - [x] Create five primary virtual machines
+- [x] Deploy OPNsense
 - [x] Create the Security LAN
-- [x] Create the DMZ
+- [x] Establish the DMZ architecture
 - [x] Configure VirtualBox network adapters
 - [x] Configure internet connectivity
-- [x] Verify internal communication
-- [x] Verify gateway connectivity
-- [x] Verify DNS resolution
-- [x] Establish the infrastructure required for later network segmentation
+- [x] Validate DHCP
+- [x] Validate gateway connectivity
+- [x] Validate internet connectivity
+- [x] Validate DNS resolution
+- [x] Establish the infrastructure required for later security phases
 
 ---
 
-# Implementation
+# ⚙️ Implementation
 
 ## 1. VirtualBox Environment
 
-Five primary virtual machines were created to represent the major systems required by the SOC environment.
-
-The architecture intentionally separates major security functions while remaining resource-efficient enough to operate on a single physical host.
-
-The five systems provide dedicated roles for:
+Five primary virtual machines were created to represent the major systems required by the enterprise SOC environment.
 
 ```text
-Firewall / Network Security
-           |
-Windows Endpoint
-           |
-Linux Endpoint
-           |
-Centralized Security Monitoring
-           |
-SOC Analyst Workstation
+┌───────────────────────────────┐
+│        VirtualBox Host        │
+├───────────────────────────────┤
+│ SOC-OPNsense                  │
+│ SOC-Windows11                 │
+│ SOC-Ubuntu                    │
+│ SOC-Wazuh                     │
+│ SOC-Kali                      │
+└───────────────────────────────┘
+```
+
+Separating the systems into individual virtual machines provides a more realistic security environment while keeping the lab resource-efficient enough to operate on a single physical host.
+
+### 📸 Evidence
+
+> **Existing screenshot:** VirtualBox VM inventory
+
+```markdown
+![VirtualBox VM Inventory](../images/EXACT-PHASE1-VM-INVENTORY-FILENAME.png)
 ```
 
 ---
 
-## 2. VirtualBox VM Inventory
+## 2. Virtual Network Configuration
 
-The completed VirtualBox inventory confirmed that the primary systems required for the lab were successfully created.
+VirtualBox networking was configured so that traffic could flow through OPNsense instead of allowing every system to operate independently.
 
-### Evidence
+This was important because later security phases depend on traffic being visible to the firewall and monitoring infrastructure.
 
-![VirtualBox VM Inventory](../images/phase1-vm-inventory.png)
-
-The five-primary-VM architecture provides the foundation for all later security phases.
-
----
-
-## 3. VirtualBox Network Configuration
-
-VirtualBox networking was configured so systems could communicate through the OPNsense security gateway rather than operating as isolated standalone virtual machines.
-
-This design allows later phases to implement:
-
-- Firewall policies
-- Network segmentation
-- IDS/IPS monitoring
-- Security logging
-- Controlled attack simulation
-- Centralized SIEM monitoring
-
-### Evidence
-
-![VirtualBox Network Configuration](../images/phase1-network-kali.png)
-
----
-
-## 4. Windows 11 Network Configuration
-
-The Windows 11 SOC endpoint was connected to the internal Security LAN.
-
-At this stage of the build, the endpoint successfully received network configuration from the OPNsense DHCP service.
-
-Observed configuration:
+The design supports:
 
 ```text
-IPv4 Address:    10.10.10.123
-Subnet Mask:     255.255.255.0
-Default Gateway: 10.10.10.1
+Endpoint
+   │
+   ▼
+VirtualBox Network
+   │
+   ▼
+OPNsense
+   │
+   ├── Firewall Rules
+   ├── Routing
+   ├── NAT
+   └── IDS/IPS
 ```
 
-The address shown here represents the Windows endpoint during this stage of the project. Addressing changed during later phases as the lab evolved.
+### 📸 Evidence
 
-### Evidence
+> **Existing screenshot:** VirtualBox network configuration
 
-![Windows 11 Network Configuration](../images/windows11-opnsense-network-config.png)
+```markdown
+![VirtualBox Network Configuration](../images/EXACT-PHASE1-NETWORK-FILENAME.png)
+```
 
 ---
 
-## 5. Windows Network Validation
+## 3. Windows 11 Network Configuration
 
-Connectivity testing was performed from the Windows endpoint to verify the basic network path.
+SOC-Windows11 was connected to the internal Security LAN.
 
-Validation confirmed:
+During this stage of the build, the endpoint successfully received network configuration through the OPNsense environment.
+
+The Windows system was configured to communicate through the OPNsense gateway:
 
 ```text
-OPNsense Gateway
+SOC-Windows11
+      │
+      ▼
+10.10.10.0/24
+      │
+      ▼
 10.10.10.1
-     |
-     | Reachable
-     v
+      │
+      ▼
+SOC-OPNsense
+```
 
+The IP address shown in the original Phase 1 evidence represents the Windows endpoint during this stage of the project.
+
+Addressing evolved during later phases as the lab architecture was expanded and refined.
+
+### 📸 Evidence
+
+> **Existing screenshot:** Windows network configuration
+
+```markdown
+![Windows Network Configuration](../images/EXACT-WINDOWS-NETWORK-CONFIG-FILENAME.png)
+```
+
+---
+
+## 4. Network Connectivity Testing
+
+After the endpoint network configuration was established, connectivity was tested at multiple layers.
+
+The validation process checked:
+
+```text
+DHCP
+  │
+  ▼
+Local IP Configuration
+  │
+  ▼
+Default Gateway
+  │
+  ▼
+OPNsense
+  │
+  ▼
 Internet
-8.8.8.8
-     |
-     | Reachable
-     v
-
-DNS Resolution
-google.com
-     |
-     | Successful
-     v
-
-Packet Loss
-0%
+  │
+  ▼
+DNS
 ```
 
-These tests demonstrated that the Windows endpoint could successfully communicate through the OPNsense security gateway.
+Testing each layer independently made it possible to verify that the virtual networking environment was functioning correctly before deploying security applications.
 
-### Evidence
+### 📸 Evidence
 
-![Windows 11 Network Validation](../images/windows11-network-validation.png)
+> **Existing screenshot:** Windows connectivity validation
+
+```markdown
+![Windows Network Validation](../images/EXACT-WINDOWS-VALIDATION-FILENAME.png)
+```
 
 ---
 
-# Validation
+# 🧪 Validation
 
-Phase 1 validation focused on confirming each layer of the basic network environment before installing security applications.
+Phase 1 validation focused on confirming that the basic infrastructure worked before moving into security monitoring.
 
-The validation process included:
+## DHCP Validation
 
-### DHCP
+The endpoint successfully received network configuration on the Security LAN.
 
-The Windows endpoint successfully received an IP address on the Security LAN.
+This demonstrated that the endpoint could communicate with the network infrastructure and obtain the required addressing information.
 
-### Gateway
+---
 
-The endpoint successfully communicated with:
+## Gateway Validation
+
+Connectivity to the OPNsense Security LAN gateway was tested:
 
 ```text
 10.10.10.1
 ```
 
-which is the OPNsense Security LAN gateway.
+Successful communication demonstrated that the endpoint could reach the firewall.
 
-### Internet Connectivity
+---
 
-External IP connectivity was successfully validated using:
+## Internet Connectivity
+
+External connectivity was validated using an external IP address.
+
+Example validation target:
 
 ```text
 8.8.8.8
 ```
 
-### DNS
+This separated basic internet connectivity testing from DNS testing.
 
-DNS resolution was validated using:
+If the IP address responded but a hostname did not, the problem could be isolated to DNS rather than routing.
+
+---
+
+## DNS Validation
+
+DNS resolution was validated using a hostname such as:
 
 ```text
 google.com
 ```
 
-### Result
+Successful resolution demonstrated that both internet connectivity and DNS functionality were operational.
 
-The completed validation demonstrated:
+---
+
+## Validation Result
+
+The completed tests demonstrated a working path:
 
 ```text
 Virtual Machine
-      |
-      v
-VirtualBox Network Adapter
-      |
-      v
+      │
+      ▼
+VirtualBox Adapter
+      │
+      ▼
 Security LAN
-      |
-      v
+      │
+      ▼
 OPNsense Gateway
-      |
-      v
+      │
+      ▼
 Internet
-      |
-      v
+      │
+      ▼
 DNS Resolution
+
+       ✅ VALIDATED
 ```
 
-The base networking environment was therefore operational.
+The infrastructure was ready for the security controls introduced in later phases.
 
 ---
 
-# Troubleshooting and Lessons Learned
+# 🔧 Troubleshooting
 
-Several configuration and validation issues were encountered while building the initial VirtualBox environment.
+Troubleshooting was an important part of building the initial environment.
 
-Documenting these issues was important because troubleshooting became a major part of the later SOC phases.
+Rather than immediately installing security applications, the underlying infrastructure was validated first.
+
+This reduced the chance of incorrectly blaming applications such as Wazuh or Suricata for problems caused by networking.
 
 ---
 
 ## OPNsense Initial Configuration
 
-During the initial OPNsense installation, the LAN and DHCP configuration required correction before the internal network operated as intended.
+During the initial OPNsense deployment, LAN and DHCP configuration required correction before the internal network operated as intended.
 
-The configuration was reviewed and corrected before continuing with deployment of the remaining virtual machines.
+The firewall configuration was reviewed before continuing with the deployment of additional systems.
 
-### Lesson
+### Key Lesson
 
-Firewall interface assignments and IP addressing should be validated before additional systems are deployed.
+A firewall sits at the center of the lab architecture.
 
-An incorrect gateway, subnet, interface assignment, or DHCP configuration at the firewall layer can create connectivity problems across the entire environment.
+A configuration problem involving:
 
----
+- Interface assignments
+- Subnets
+- Gateways
+- DHCP
+- NAT
+- Routing
 
-## VirtualBox Network Configuration
+can affect every connected virtual machine.
 
-The virtual machines required the correct VirtualBox network adapters to communicate through OPNsense.
-
-Network configuration was validated before security tools were installed.
-
-This was important because later connectivity failures could otherwise be incorrectly attributed to:
-
-- Wazuh
-- Suricata
-- Endpoint agents
-- Firewall rules
-- Security applications
-
-when the underlying problem might actually be the virtual network configuration.
+For that reason, the firewall and network layer should be validated before troubleshooting higher-level security applications.
 
 ---
 
-## Windows Network Validation
+## VirtualBox Network Adapters
 
-After SOC-Windows11 was connected to the Security LAN, multiple connectivity layers were tested independently.
+Each virtual machine required the correct VirtualBox network adapter configuration.
 
-Validation included:
+An incorrectly assigned adapter could prevent the VM from reaching:
 
-1. DHCP address assignment
-2. IP configuration
-3. Default gateway connectivity
-4. Internet connectivity
-5. DNS resolution
+- OPNsense
+- Other internal systems
+- The internet
+- Security monitoring infrastructure
 
-The endpoint successfully received an address on the Security LAN and used OPNsense as its default gateway.
+This reinforced the importance of checking the virtualization layer before troubleshooting the operating system or application layer.
 
 ---
 
-## Layered Troubleshooting Methodology
+## Connectivity Troubleshooting
 
-One of the most important lessons from Phase 1 was to validate network connectivity in layers.
+Instead of testing everything simultaneously, connectivity was validated one layer at a time.
 
 ```text
-Virtual Machine
-      |
-      v
-VirtualBox Adapter
-      |
-      v
-IP Configuration
-      |
-      v
-Default Gateway
-      |
-      v
-OPNsense
-      |
-      v
-Internet Connectivity
-      |
-      v
-DNS Resolution
+VM Running?
+    │
+    ▼
+Adapter Correct?
+    │
+    ▼
+IP Address Correct?
+    │
+    ▼
+Gateway Reachable?
+    │
+    ▼
+OPNsense Working?
+    │
+    ▼
+Internet Reachable?
+    │
+    ▼
+DNS Working?
 ```
 
-If a connection fails, each layer should be validated individually.
-
-This makes it easier to determine whether the problem exists at the:
-
-- Virtual machine
-- VirtualBox adapter
-- IP configuration
-- Gateway
-- Firewall
-- Routing layer
-- Internet connection
-- DNS layer
-
-This troubleshooting methodology was reused throughout later phases of the project.
+This approach became a recurring troubleshooting methodology throughout the Enterprise Security Operations Lab.
 
 ---
 
-# Skills Demonstrated
+# 💡 Lessons Learned
+
+## 1. Validate Infrastructure Before Applications
+
+A security application cannot function correctly if the underlying network is broken.
+
+Before troubleshooting Wazuh, Suricata, agents, or other security tools, validate:
+
+```text
+VM → Adapter → IP → Gateway → Routing → Service
+```
+
+---
+
+## 2. Test Connectivity in Layers
+
+Testing only a hostname does not identify where a network failure exists.
+
+Testing each layer independently provides more useful information.
+
+For example:
+
+```text
+Ping Gateway
+     ↓
+Test External IP
+     ↓
+Test DNS Name
+```
+
+Each test validates a different component.
+
+---
+
+## 3. Firewall Configuration Affects the Entire Lab
+
+OPNsense became a central component of the project.
+
+Incorrect firewall or interface configuration can affect:
+
+- DHCP
+- Routing
+- NAT
+- Segmentation
+- IDS/IPS
+- Endpoint communication
+- SIEM communication
+
+Understanding the network path is therefore essential for security troubleshooting.
+
+---
+
+## 4. Build the Lab in Layers
+
+The lab was intentionally built in phases.
+
+```text
+Virtualization
+      ↓
+Networking
+      ↓
+Segmentation
+      ↓
+Endpoint Monitoring
+      ↓
+SIEM/XDR
+      ↓
+IDS/IPS
+      ↓
+Detection
+      ↓
+Automation
+      ↓
+Incident Response
+```
+
+Building the environment incrementally made troubleshooting easier and provided clear evidence of each completed capability.
+
+---
+
+# 🧠 Skills Demonstrated
 
 Phase 1 provided hands-on experience with:
 
-- VirtualBox virtualization
-- Virtual machine deployment
-- Virtual networking
-- Network architecture
-- IPv4 addressing
-- Subnetting
-- DHCP
-- Default gateways
-- NAT
-- DNS validation
-- Firewall-based network design
-- Connectivity testing
-- Layered troubleshooting
-- Infrastructure documentation
+| Skill | Application |
+|---|---|
+| **Virtualization** | Created and managed multiple VirtualBox VMs |
+| **Network Architecture** | Designed Security LAN, DMZ, and WAN connectivity |
+| **IPv4 Networking** | Configured and validated private IPv4 networks |
+| **Subnetting** | Used separate internal network segments |
+| **DHCP** | Validated dynamic endpoint configuration |
+| **Routing** | Routed endpoint traffic through OPNsense |
+| **NAT** | Provided external connectivity through the firewall |
+| **DNS** | Validated hostname resolution |
+| **Firewall Architecture** | Positioned OPNsense as the central security gateway |
+| **Troubleshooting** | Used layered network validation |
+| **Documentation** | Recorded implementation and validation evidence |
 
 ---
 
-# Phase 1 Outcome
+# 📸 Evidence Summary
 
-Phase 1 successfully established the virtual infrastructure required for the Enterprise Security Operations Lab.
+Phase 1 evidence documents the successful deployment and validation of the base lab environment.
 
-The completed environment included:
+| Evidence | Demonstrates |
+|---|---|
+| **VirtualBox VM Inventory** | Five-primary-VM architecture |
+| **VirtualBox Network Configuration** | VM network adapter configuration |
+| **Windows Network Configuration** | Security LAN addressing and gateway |
+| **Windows Network Validation** | Gateway, internet, and DNS connectivity |
+
+> The original project screenshots are reused throughout this documentation. No duplicate lab evidence is required.
+
+---
+
+# 🏁 Phase Outcome
+
+## ✅ Phase 1 Complete
+
+Phase 1 successfully established the virtualization and networking foundation for the **Enterprise Security Operations Lab**.
+
+The completed environment provided:
 
 ```text
-SOC-OPNsense
-      |
-      +---- SOC-LAN
-      |
-      +---- DMZ
-      |
-      +---- Internet / NAT
-
-SOC-Windows11
-SOC-Ubuntu
-SOC-Wazuh
-SOC-Kali
+                    INTERNET
+                       │
+                       ▼
+                  SOC-OPNsense
+                       │
+              ┌────────┴────────┐
+              │                 │
+              ▼                 ▼
+           SOC-LAN            SOC-DMZ
+              │                 │
+       ┌──────┼──────┐          │
+       │      │      │          │
+       ▼      ▼      ▼          ▼
+    Windows  Kali   Wazuh     Ubuntu
 ```
 
-The environment provided a functional base for implementing firewall segmentation, endpoint security monitoring, centralized SIEM/XDR, IDS/IPS, incident response, security automation, and the other capabilities introduced throughout the project.
+With the underlying infrastructure operational, the project was ready to move into firewall policies and network segmentation.
 
 ---
 
-# Evidence Summary
+## ➡️ Next Phase
 
-| Evidence | Description |
-|---|---|
-| `phase1-vm-inventory.png` | Five-primary-VM VirtualBox inventory |
-| `phase1-network-kali.png` | VirtualBox network configuration |
-| `windows11-opnsense-network-config.png` | Windows Security LAN configuration |
-| `windows11-network-validation.png` | Gateway, internet, and DNS validation |
+**Phase 02 — OPNsense Firewall & Network Segmentation**
+
+The next phase introduces firewall policy enforcement and segmentation between the internal Security LAN and DMZ.
 
 ---
 
-# Phase 1 Status
-
-## ✅ COMPLETE
-
-The VirtualBox enterprise environment was successfully built and validated.
-
-The lab was ready to proceed to **Phase 2 — OPNsense Firewall and Network Segmentation**.
+[🏠 Back to Main Project](../README.md) | [Next: Phase 02 →](phase-02-network-segmentation.md)
 
 ---
 
-## Navigation
+### Enterprise Security Operations Lab
 
-[← Back to Main Project](../README.md)
-
-**Next:** [Phase 02 — OPNsense Firewall & Network Segmentation](phase-02-network-segmentation.md)
+**Focus:** SOC Operations • Detection Engineering • Network Security • Security Automation • Incident Response
