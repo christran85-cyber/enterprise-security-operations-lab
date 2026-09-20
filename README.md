@@ -8487,307 +8487,669 @@ The Python security automation, Wazuh custom integration, Gmail API OAuth authen
 
 ---
 
-# Phase 14: Enterprise SOC Investigation
+# Phase 14 — End-to-End SOC Incident Detection, Correlation & Response
 
-## End-to-End Security Scenario
+## Objective
 
-The final phase integrates the tools and skills demonstrated throughout the project.
+Phase 14 validates the complete SOC workflow by generating controlled security activity from SOC-Kali, detecting and correlating the activity across the security monitoring stack, investigating the incident, validating automated analyst notification, and documenting the complete incident lifecycle in DFIR-IRIS.
 
-Controlled security events are generated only against systems owned and isolated inside the VirtualBox environment.
+The phase demonstrates the following end-to-end workflow:
 
-## Example Events
-
-- Failed authentication
-- Network reconnaissance
-- Port scanning
-- Suspicious PowerShell activity
-- Unexpected network connections
-- File integrity changes
-- Suspicious test files
-- IOC matches
-- Vulnerability findings
-- Web application security findings
-
-## Investigation Workflow
-
-```text
-Controlled Security Event
-          |
-          v
-Endpoint / Network Telemetry
-          |
-          v
-Suricata + Sysmon + auditd
-          |
-          v
-        Wazuh
-          |
-          v
-       SOC Alert
-          |
-          v
-Analyst Investigation
-          |
-          +--> Nmap
-          +--> Wireshark
-          +--> YARA
-          +--> Volatility
-          +--> Autopsy
-          +--> ZAP
-          |
-          v
-      SQL Analysis
-          |
-          v
-     SecurityOpsDB
-          |
-          v
-     MISP Correlation
-          |
-          v
-    DFIR-IRIS Case
-          |
-          v
-      Containment
-          |
-          v
-      Remediation
-          |
-          v
-    OpenVAS Rescan
-          |
-          v
-       Validation
-          |
-          v
-   Final Incident Report
-```
-
-### Snapshot 1 — Security Event
-
-![Security Event](images/phase14-event.png)
-
-### Snapshot 2 — Wazuh Detection
-
-![Wazuh Detection](images/phase14-wazuh.png)
-
-### Snapshot 3 — Suricata Detection
-
-![Suricata Detection](images/phase14-suricata.png)
-
-### Snapshot 4 — Investigation
-
-![Investigation](images/phase14-investigation.png)
-
-### Snapshot 5 — SQL Correlation
-
-![SQL Analysis](images/phase14-sql.png)
-
-### Snapshot 6 — MISP Correlation
-
-![MISP Correlation](images/phase14-misp.png)
-
-### Snapshot 7 — DFIR-IRIS Case
-
-![DFIR-IRIS Case](images/phase14-dfir.png)
-
-### Snapshot 8 — Remediation
-
-![Remediation](images/phase14-remediation.png)
-
-### Snapshot 9 — Validation
-
-![Validation](images/phase14-validation.png)
-
-### Outcome
-
-The final scenario demonstrates a complete security operations workflow:
-
-**Detect → Analyze → Investigate → Correlate → Respond → Remediate → Validate → Report**
+**Controlled Security Activity → Network Detection → SIEM Correlation → Automated Notification → Incident Investigation → Case Closure**
 
 ---
 
-# CySA+ CS0-004 Skills Demonstrated
+## Environment
 
-## Security Operations
-
-- SIEM/XDR monitoring
-- Endpoint telemetry
-- Network monitoring
-- IDS/IPS analysis
-- Firewall analysis
-- Log analysis
-- IOC analysis
-- Threat intelligence
-- Security automation
-
-## Vulnerability Management
-
-- Asset discovery
-- Vulnerability scanning
-- CVSS analysis
-- Risk prioritization
-- Remediation
-- Rescanning
-- Validation
-
-## Incident Response
-
-- Detection
-- Analysis
-- Investigation
-- Containment
-- Eradication
-- Recovery
-- Evidence analysis
-- Incident documentation
-- Lessons learned
-
-## Security Analysis
-
-- Network discovery
-- Packet analysis
-- Endpoint analysis
-- Log correlation
-- SQL security analytics
-- Threat intelligence correlation
-- File analysis
-- Memory analysis
-- Disk forensics
-- Web application analysis
+| System | Role | IP Address |
+|---|---|---|
+| SOC-Kali | Security analyst / controlled activity source | `10.10.10.103` |
+| SOC-Ubuntu | Monitored Linux target | `10.50.20.100` |
+| SOC-OPNsense | Firewall / Suricata IDS | `10.10.10.1` |
+| SOC-Wazuh | SIEM / log correlation | `10.10.10.102` |
+| DFIR-IRIS | Incident response and case management | Hosted on SOC-Kali |
 
 ---
 
-# Technology Stack
+## 1. Reconnaissance Validation
+
+SOC-Kali was used to perform controlled reconnaissance against SOC-Ubuntu.
+
+```bash
+sudo nmap -sV 10.50.20.100
+```
+
+The scan confirmed that the target was reachable and identified exposed services including:
+
+- TCP/22 — SSH
+- TCP/80 — HTTP / Apache
+
+This provided a controlled reconnaissance event that could be observed by the network security monitoring stack.
+
+### Evidence
+
+![Phase 14 Kali Reconnaissance](images/phase14-kali-reconnaissance-nmap.png)
+
+---
+
+## 2. Suricata Reconnaissance Detection
+
+Suricata running on OPNsense detected traffic originating from SOC-Kali (`10.10.10.103`) and targeting SOC-Ubuntu (`10.50.20.100`).
+
+Observed alerts included:
+
+- `Internal Recon - Kali to Ubuntu`
+- `Kali to Ubuntu Http Detection`
+- `ET SCAN Possible Nmap User-Agent Observed`
+
+This validated that network reconnaissance activity was visible at the IDS layer.
+
+### Evidence
+
+![Phase 14 Suricata Reconnaissance Detection](images/phase14-suricata-reconnaissance-detection.png)
+
+---
+
+## 3. Controlled SSH Authentication Failures
+
+After confirming SSH was available on SOC-Ubuntu, controlled authentication failures were generated from SOC-Kali.
+
+```bash
+ssh phase14test@10.50.20.100
+```
+
+Multiple invalid authentication attempts were intentionally generated inside the isolated lab environment.
+
+The attempts resulted in SSH authentication failures such as:
 
 ```text
-VirtualBox
-|
-+-- VM 1: OPNsense
-|   +-- Firewall
-|   +-- NAT
-|   +-- Segmentation
-|   +-- Suricata
-|
-+-- VM 2: Windows 11
-|   +-- Sysmon
-|   +-- Wazuh Agent
-|
-+-- VM 3: Ubuntu
-|   +-- auditd
-|   +-- osquery
-|   +-- Wazuh Agent
-|   +-- Vulnerable Web Application
-|
-+-- VM 4: Security Server
-|   +-- Wazuh
-|   +-- PostgreSQL
-|   +-- SecurityOpsDB
-|   +-- Python
-|
-+-- VM 5: Kali Analyst
-    +-- Nmap
-    +-- Wireshark
-    +-- OWASP ZAP
-    +-- YARA
-    +-- Volatility 3
+Permission denied, please try again.
+Permission denied (publickey,password).
+```
 
-Phase-Specific Tools
-|
-+-- Greenbone/OpenVAS
-+-- MISP
-+-- DFIR-IRIS
-+-- Autopsy
+This activity provided controlled authentication telemetry for Wazuh detection and correlation.
+
+### Evidence
+
+![Phase 14 Controlled SSH Authentication Failures](images/phase14-controlled-ssh-authentication-failures.png)
+
+---
+
+## 4. Wazuh SSH Authentication Detection
+
+The SOC-Ubuntu Wazuh agent collected the SSH authentication events and forwarded them to the Wazuh manager.
+
+Wazuh recorded authentication activity originating from:
+
+```text
+Source IP: 10.10.10.103
+Source System: SOC-Kali
+
+Target IP: 10.50.20.100
+Target System: SOC-Ubuntu
+
+Service: SSH
+```
+
+Individual failed authentication attempts generated SSH-related security events in Wazuh.
+
+### Evidence
+
+![Phase 14 Wazuh SSH Authentication Detection](images/phase14-wazuh-ssh-authentication-detection.png)
+
+---
+
+## 5. Wazuh Event Correlation
+
+Repeated SSH authentication failures were correlated by Wazuh.
+
+The repeated failures triggered:
+
+```text
+Rule ID: 2502
+Level: 10
+Description: syslog: User missed the password more than one time
+```
+
+The event was associated with MITRE ATT&CK activity related to:
+
+```text
+Tactic: Credential Access
+Technique: Brute Force
+```
+
+This demonstrated the difference between individual authentication events and a higher-severity correlated security alert.
+
+### Evidence
+
+![Phase 14 Wazuh Level 10 SSH Correlation](images/phase14-wazuh-level10-ssh-correlation.png)
+
+---
+
+## 6. Wazuh Rule 2502 Log Validation
+
+The correlated security event was also verified directly from the Wazuh alert logs.
+
+The following command was used on SOC-Wazuh:
+
+```bash
+sudo grep 2502 /var/ossec/logs/alerts/alerts.json | tail -n 5
+```
+
+The results confirmed:
+
+```text
+Rule ID: 2502
+Alert Level: 10
+Agent: soc-ubuntu
+Agent IP: 10.50.20.100
+Source IP: 10.10.10.103
+Authentication Service: SSH
+```
+
+The Wazuh logs also showed the repeated PAM/SSHD authentication failures responsible for triggering the correlation rule.
+
+### Evidence
+
+![Phase 14 Wazuh Rule 2502 Evidence](images/phase14-wazuh-rule2502-level10-evidence.png)
+
+---
+
+## 7. Source and Target Correlation
+
+Wazuh logs were reviewed to correlate the activity between the source and destination systems.
+
+The investigation confirmed:
+
+```text
+SOURCE
+
+System: SOC-Kali
+IP Address: 10.10.10.103
+
+        ↓ SSH Authentication Attempts
+
+DESTINATION
+
+System: SOC-Ubuntu
+IP Address: 10.50.20.100
+```
+
+The SSH events showed `10.10.10.103` attempting authentication against the monitored Ubuntu system.
+
+This established a traceable relationship between the generated activity, the affected system, and the Wazuh detection.
+
+### Evidence
+
+![Phase 14 Wazuh Kali Ubuntu Correlation](images/phase14-wazuh-kali-ubuntu-correlation.png)
+
+---
+
+## 8. Automated SOC Email Notification
+
+The Wazuh detection workflow was connected to the automated SOC email notification capability implemented during Phase 13.
+
+The validated alert pipeline was:
+
+```text
+Security Event
+      ↓
+Wazuh Detection
+      ↓
+Wazuh Integratord
+      ↓
+Custom Integration
+      ↓
+Python Automation
+      ↓
+Gmail API / OAuth 2.0
+      ↓
+SOC Email Notification
+```
+
+This demonstrated how SIEM detections can automatically trigger analyst notifications without requiring continuous manual monitoring of the Wazuh dashboard.
+
+The Phase 13 integration used the Gmail API with OAuth 2.0 rather than storing a Gmail application password in the automation.
+
+---
+
+## 9. DFIR-IRIS Incident Investigation
+
+The detected activity was documented as a formal security incident in DFIR-IRIS.
+
+### Case Information
+
+```text
+Case: #3 - Phase 14 - SSH Brute Force Incident
+SOC ID: SOC-2026-002
+Case ID: 3
+Severity: Low
+State: Closed
+Owner: administrator
+```
+
+The case documented the controlled SSH authentication activity and subsequent investigation.
+
+### Evidence
+
+![Phase 14 IRIS Case Summary](images/phase14-iris-case-summary.png)
+
+---
+
+## 10. Incident Timeline
+
+A chronological incident timeline was created in DFIR-IRIS to preserve the sequence of detection and response activities.
+
+The documented sequence included:
+
+1. Controlled SSH authentication testing initiated.
+2. Wazuh detected repeated SSH authentication failures.
+3. Wazuh correlated the repeated events.
+4. Automated SOC email notification generated.
+5. Analyst investigation and validation performed.
+6. Incident reviewed and closed.
+
+One of the timeline events documented the automated SOC email alert generated following Wazuh detection.
+
+The notification was linked to the Wazuh detection to demonstrate the relationship between SIEM detection and analyst notification.
+
+### Evidence
+
+![Phase 14 IRIS Incident Timeline](images/phase14-iris-incident-timeline.png)
+
+---
+
+## 11. Assets and IOC Correlation
+
+The incident investigation associated the following systems with the case:
+
+```text
+SOC-Kali
+10.10.10.103
+
+SOC-Ubuntu
+10.50.20.100
+```
+
+The controlled source IP was documented as an IOC:
+
+```text
+10.10.10.103
+```
+
+DFIR-IRIS graph visualization was used to visualize the relationship between the IOC and systems involved in the incident.
+
+### Evidence
+
+![Phase 14 IRIS Incident Graph](images/phase14-iris-incident-graph.png)
+
+---
+
+## 12. Incident Response Tasks
+
+Five incident-response tasks were documented and completed in DFIR-IRIS.
+
+### Task 1 — Validate Wazuh SSH Authentication Alert
+
+The Wazuh alert generated by the repeated SSH authentication failures was reviewed.
+
+The investigation confirmed:
+
+```text
+Source: SOC-Kali
+Source IP: 10.10.10.103
+
+Target: SOC-Ubuntu
+Target IP: 10.50.20.100
+
+Wazuh Rule: 2502
+Alert Level: 10
 ```
 
 ---
 
-# Repository Structure
+### Task 2 — Verify Automated SOC Email Notification
+
+The Phase 13 automated email integration was reviewed to verify that the security detection workflow could generate an analyst notification.
+
+The automation path consisted of:
 
 ```text
-enterprise-security-operations-lab/
-|
-+-- README.md
-|
-+-- images/
-|   +-- diagram.png
-|   +-- arch2.png
-|   +-- phase1-vm-inventory.png
-|   +-- phase1-network-kali.png
-|   +-- windows11-opnsense-network-config.png
-|   +-- windows11-network-validation.png
-|   +-- phase1-opnsense-dashboard.png
-|   +-- phase2-interfaces.png
-|   +-- phase2-firewall-rules.png
-|   +-- phase2-segmentation-validation.png
-|   +-- phase3-windows.png
-|   +-- phase3-windows-process-auditing.png
-|   +-- phase3-sysmon.png
-|   +-- phase3-windows-wazuh.png
-|   +-- phase3-ubuntu.png
-|   +-- phase3-linux-monitoring.png
-|   +-- phase3-ubuntu-wazuh-failed-auth-detection.png
-|   +-- phase3-wazuh-ubuntu-authentication-failure.png
-|   +-- ubuntu-wazuh-alert-validation.png
-|   +-- phase4-dashboard.png
-|   +-- phase4-agents.png
-|   +-- phase4-alerts.png
-|   +-- phase5-suricata.png
-|   +-- phase5-alert.png
-|   +-- phase5-wazuh.png
-|   +-- phase6-nmap.png
-|   +-- phase6-wireshark.png
-|   +-- phase6-packet-analysis.png
-|   +-- phase7-scan.png
-|   +-- phase7-results.png
-|   +-- phase7-detail.png
-|   +-- phase7-rescan.png
-|   +-- phase8-database.png
-|   +-- phase8-tables.png
-|   +-- phase8-join.png
-|   +-- phase8-analytics.png
-|   +-- phase8-audit.png
-|   +-- phase9-misp.png
-|   +-- phase9-ioc.png
-|   +-- phase9-correlation.png
-|   +-- phase10-dfir.png
-|   +-- phase10-case.png
-|   +-- phase10-timeline.png
-|   +-- phase11-yara-rule.png
-|   +-- phase11-yara-detection.png
-|   +-- phase11-volatility.png
-|   +-- phase11-autopsy.png
-|   +-- phase12-webapp.png
-|   +-- phase12-zap.png
-|   +-- phase12-findings.png
-|   +-- phase13-python.png
-|   +-- phase13-execution.png
-|   +-- phase13-import.png
-|   +-- phase14-event.png
-|   +-- phase14-wazuh.png
-|   +-- phase14-suricata.png
-|   +-- phase14-investigation.png
-|   +-- phase14-sql.png
-|   +-- phase14-misp.png
-|   +-- phase14-dfir.png
-|   +-- phase14-remediation.png
-|   +-- phase14-validation.png
-|
-+-- sql/
-|   +-- schema.sql
-|   +-- security-queries.sql
-|   +-- views.sql
-|   +-- triggers.sql
-|
-+-- scripts/
-|   +-- security-automation.py
-|
-+-- yara/
-|   +-- detection-rules.yar
-|
-+-- reports/
-    +-- incident-reports/
+Wazuh
+   ↓
+Wazuh Integratord
+   ↓
+Custom Integration
+   ↓
+Python Automation
+   ↓
+Gmail API
+   ↓
+OAuth 2.0
+   ↓
+SOC Analyst Mailbox
 ```
+
+This validated the automated notification capability developed during Phase 13.
+
+---
+
+### Task 3 — Investigate SSH Authentication Source and Target
+
+The systems associated with the authentication activity were investigated.
+
+The source was confirmed as the authorized SOC-Kali system:
+
+```text
+SOC-Kali
+10.10.10.103
+```
+
+The target was confirmed as:
+
+```text
+SOC-Ubuntu
+10.50.20.100
+```
+
+The activity was determined to be part of the controlled Phase 14 security validation exercise.
+
+---
+
+### Task 4 — Assess Containment and Remediation Requirements
+
+The authentication activity was reviewed to determine whether containment or remediation actions were necessary.
+
+The investigation confirmed that:
+
+- The activity originated from the authorized SOC-Kali system.
+- The authentication failures were intentionally generated.
+- No successful unauthorized authentication occurred.
+- No system compromise was identified.
+- No production systems were involved.
+
+Because the activity was authorized and contained within the isolated security lab, additional containment or remediation was not required.
+
+---
+
+### Task 5 — Complete Final Incident Review and Closure
+
+A final review of the incident was performed.
+
+The analyst verified:
+
+- Wazuh detection evidence
+- Rule 2502 correlation
+- Source and target systems
+- IOC information
+- Automated notification workflow
+- Incident timeline
+- Investigation results
+- Containment assessment
+- Response documentation
+
+All required investigation activities were completed before the incident was closed.
+
+### Evidence
+
+![Phase 14 IRIS Completed Tasks](images/phase14-iris-completed-tasks.png)
+
+---
+
+## 13. Incident Closure
+
+After reviewing the detection evidence, source and destination systems, automated notification workflow, IOC relationships, timeline, and response tasks, the incident was formally closed.
+
+Final case status:
+
+```text
+Case: #3 - Phase 14 - SSH Brute Force Incident
+Case ID: 3
+SOC ID: SOC-2026-002
+State: Closed
+Severity: Low
+```
+
+The investigation determined that the activity was an authorized controlled security test and that no unauthorized system compromise occurred.
+
+### Evidence
+
+![Phase 14 IRIS Case Closed](images/phase14-iris-case-closed.png)
+
+---
+
+# Phase 14 Results
+
+Phase 14 successfully validated an end-to-end SOC detection and incident-response workflow.
+
+The lab demonstrated:
+
+- Controlled reconnaissance generation
+- Nmap service discovery
+- Suricata IDS detection
+- Controlled SSH authentication failures
+- Wazuh endpoint log collection
+- Wazuh SSH authentication detection
+- Wazuh event correlation
+- Level 10 Rule 2502 detection
+- MITRE ATT&CK mapping
+- Source and destination correlation
+- Automated SOC email notification
+- Gmail API integration
+- OAuth 2.0 authentication
+- DFIR-IRIS case management
+- IOC documentation
+- Asset correlation
+- Incident timeline creation
+- Incident graph visualization
+- Analyst response task tracking
+- Containment and remediation assessment
+- Formal incident closure
+
+The completed workflow demonstrates how multiple defensive security technologies can operate together as an integrated SOC environment rather than functioning as isolated security tools.
+
+---
+
+# Lessons Learned
+
+## 1. Correlation Provides Stronger Context Than Individual Events
+
+Individual SSH authentication failures generated security events, but repeated failures caused Wazuh Rule 2502 to generate a Level 10 correlated alert.
+
+This demonstrated how SIEM correlation can identify patterns that are more significant than individual log entries.
+
+---
+
+## 2. Network and Endpoint Telemetry Provide Complementary Evidence
+
+Suricata provided visibility into network reconnaissance while Wazuh provided host-level visibility into SSH authentication activity.
+
+Combining network and endpoint telemetry provided a clearer picture of the security activity.
+
+---
+
+## 3. Source Attribution Requires Log Validation
+
+The investigation used Wazuh alert data to verify that:
+
+```text
+10.10.10.103
+```
+
+was the source of the controlled authentication attempts against:
+
+```text
+10.50.20.100
+```
+
+Reviewing the actual event logs was necessary to establish the relationship between the systems.
+
+---
+
+## 4. Detection Is Only One Part of SOC Operations
+
+Generating an alert does not complete the incident-response process.
+
+The alert must also be:
+
+```text
+Detected
+   ↓
+Validated
+   ↓
+Correlated
+   ↓
+Investigated
+   ↓
+Documented
+   ↓
+Assessed
+   ↓
+Closed
+```
+
+DFIR-IRIS provided the case-management layer necessary to document this lifecycle.
+
+---
+
+## 5. Automation Reduces Analyst Notification Time
+
+The Phase 13 email integration demonstrated how Wazuh detections can trigger automated SOC notifications through Python and the Gmail API using OAuth 2.0.
+
+This reduces dependence on continuously monitoring the SIEM interface.
+
+---
+
+## 6. Time Synchronization Matters During Investigations
+
+During Phase 14, SOC-Kali and SOC-Wazuh were verified and configured to use:
+
+```text
+America/Chicago
+CDT (-0500)
+```
+
+NTP synchronization was active.
+
+Consistent system time makes correlation between security logs, SIEM alerts, email notifications, and incident timelines significantly easier.
+
+Historical Wazuh JSON events retain the timestamps recorded when those events originally occurred, so changing the operating-system timezone does not rewrite previously stored alert timestamps.
+
+---
+
+# Phase 14 SOC Workflow
+
+```text
+                    ┌──────────────────┐
+                    │     SOC-Kali     │
+                    │   10.10.10.103   │
+                    └────────┬─────────┘
+                             │
+                 Recon / SSH Authentication
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │    SOC-Ubuntu    │
+                    │   10.50.20.100   │
+                    └────────┬─────────┘
+                             │
+                       Endpoint Logs
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │   Wazuh Agent    │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │    SOC-Wazuh     │
+                    │ Detection + SIEM │
+                    └────────┬─────────┘
+                             │
+                       Rule 2502
+                       Level 10
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │ Python Security  │
+                    │    Automation    │
+                    └────────┬─────────┘
+                             │
+                    Gmail API / OAuth 2.0
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │    SOC Email     │
+                    │   Notification   │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │    DFIR-IRIS     │
+                    │ Investigation &  │
+                    │ Case Management  │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │ Incident Closure │
+                    └──────────────────┘
+```
+
+---
+
+# Evidence Summary
+
+| Evidence | Screenshot |
+|---|---|
+| Kali Nmap reconnaissance | `phase14-kali-reconnaissance-nmap.png` |
+| Suricata reconnaissance detection | `phase14-suricata-reconnaissance-detection.png` |
+| Controlled SSH authentication failures | `phase14-controlled-ssh-authentication-failures.png` |
+| Wazuh SSH authentication detection | `phase14-wazuh-ssh-authentication-detection.png` |
+| Wazuh Level 10 correlation | `phase14-wazuh-level10-ssh-correlation.png` |
+| Wazuh Rule 2502 evidence | `phase14-wazuh-rule2502-level10-evidence.png` |
+| Wazuh source/target correlation | `phase14-wazuh-kali-ubuntu-correlation.png` |
+| DFIR-IRIS case summary | `phase14-iris-case-summary.png` |
+| DFIR-IRIS incident timeline | `phase14-iris-incident-timeline.png` |
+| DFIR-IRIS incident graph | `phase14-iris-incident-graph.png` |
+| DFIR-IRIS completed tasks | `phase14-iris-completed-tasks.png` |
+| DFIR-IRIS closed case | `phase14-iris-case-closed.png` |
+
+---
+
+# VirtualBox Snapshot
+
+After completing and validating the Phase 14 workflow, a final VirtualBox snapshot should be created to preserve the working incident-response environment.
+
+## VM
+
+```text
+SOC-Kali
+```
+
+## Snapshot Name
+
+```text
+Phase 14 - Incident Response Workflow Complete
+```
+
+## Snapshot Description
+
+```text
+Phase 14 completed. Controlled SSH brute-force activity was detected by Wazuh, investigated and correlated in DFIR-IRIS, automated SOC email notification was validated, five incident-response tasks were completed, and Case #3 (SOC-2026-002) was formally closed.
+```
+
+---
+
+# Phase 14 Status
+
+## ✅ COMPLETE
+
+Phase 14 completes the end-to-end SOC workflow by connecting:
+
+**Controlled Security Activity → Network Monitoring → SIEM Detection → Event Correlation → Automated Analyst Notification → Incident Investigation → Response Tracking → Formal Case Closure**
+
+This phase demonstrates a complete security operations workflow from initial security activity through final incident documentation and closure.
 
 ---
 
@@ -8829,8 +9191,8 @@ All scanning, testing, traffic generation, vulnerability assessment, and securit
 | Phase 10 — Centralized Network Security Logging & Correlation | ✅ Complete |
 | Phase 11 — Incident Response & Case Management with DFIR-IRIS | ✅ Complete |
 | Phase 12 — Web Application Security |  ✅ Complete  |
-| Phase 13 — Python Security Automation |  🔄 Next  |
-| Phase 14 — Enterprise SOC Investigation | ⏳ Planned |
+| Phase 13 — Python Security Automation |   ✅ Complete  |
+| Phase 14 — Enterprise SOC Investigation |  ✅ Complete |
 
 ---
 
