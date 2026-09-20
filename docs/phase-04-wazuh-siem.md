@@ -88,7 +88,7 @@ The work included:
 
 The objective was not simply to confirm that events existed.
 
-The objective was to follow the SOC workflow:
+The objective was to follow a SOC workflow:
 
 ```text
 Event
@@ -131,8 +131,6 @@ Document Findings
                 SOC-Ubuntu
                 10.50.20.100
 ```
-
-Wazuh provides centralized visibility across Windows and Linux endpoints.
 
 The complete telemetry path is:
 
@@ -187,9 +185,9 @@ SOC Analyst
 
 # ⚙️ Wazuh Platform Validation
 
-Wazuh was deployed on the dedicated SOC-Wazuh virtual machine.
+Wazuh was deployed on the dedicated **SOC-Wazuh** virtual machine.
 
-The platform provides the centralized security layer for the lab.
+The platform provides the centralized security-monitoring layer for the lab.
 
 Core components include:
 
@@ -220,7 +218,9 @@ The environment uses a self-signed certificate.
 
 ![Wazuh Dashboard](../images/phase4-dashboard.png)
 
-The dashboard provides the SOC analyst with centralized visibility into endpoint alerts and security events.
+The dashboard provides centralized visibility into endpoint alerts and security events.
+
+**Result:** ✅ Wazuh Dashboard operational.
 
 ---
 
@@ -231,10 +231,10 @@ Both monitored endpoints were successfully connected to Wazuh.
 The Wazuh environment showed:
 
 ```text
-Active:          2
-Pending:         0
-Disconnected:    0
-Never Connected: 0
+Active:           2
+Pending:          0
+Disconnected:     0
+Never Connected:  0
 ```
 
 Connected endpoints:
@@ -249,15 +249,15 @@ soc-ubuntu
       └── ACTIVE
 ```
 
-This validated the endpoint telemetry infrastructure established in Phase 3.
+This validated the endpoint telemetry infrastructure established during Phase 3.
 
 ---
 
-## 📸 Evidence — Connected Agents
+## 📸 Evidence — Connected Wazuh Agents
 
 ![Wazuh Connected Agents](../images/phase4-agents.png)
 
-**Result:** ✅ Both monitored endpoints successfully connected to the centralized Wazuh environment.
+**Result:** ✅ Both monitored endpoints successfully connected to Wazuh.
 
 ---
 
@@ -282,7 +282,7 @@ Rule Level:  5
 Description: PAM: User login failed
 ```
 
-The investigation path was:
+The detection path was:
 
 ```text
 Authentication Failure
@@ -315,7 +315,7 @@ This demonstrated that Wazuh could transform raw authentication telemetry into a
 
 ## Alert Analysis
 
-The analyst reviewed:
+The investigation included:
 
 - Agent name
 - Endpoint IP
@@ -326,7 +326,7 @@ The analyst reviewed:
 - Event timestamp
 - Associated security context
 
-Instead of looking only at the alert description, the event was expanded to understand the underlying context.
+Instead of looking only at the alert title, the event was expanded to understand the underlying context.
 
 ---
 
@@ -334,7 +334,7 @@ Instead of looking only at the alert description, the event was expanded to unde
 
 Wazuh provides MITRE ATT&CK context for supported detections.
 
-This allows an analyst to move from:
+This allows the analyst to move from:
 
 ```text
 What happened?
@@ -346,11 +346,7 @@ to:
 What type of adversary behavior could this activity represent?
 ```
 
-The authentication activity was reviewed alongside its associated MITRE ATT&CK information.
-
-This added security context to the raw detection.
-
-The investigation process therefore became:
+The investigation process became:
 
 ```text
 Raw Event
@@ -396,9 +392,7 @@ A Windows process event was analyzed through Wazuh using:
 Rule 67027
 ```
 
-The investigation focused on process context rather than simply acknowledging that an alert occurred.
-
-Useful process information included:
+The investigation focused on:
 
 - Endpoint
 - User
@@ -406,7 +400,7 @@ Useful process information included:
 - Parent process
 - Command line
 - Event timestamp
-- Rule information
+- Wazuh rule
 - Associated event context
 
 This demonstrated the difference between:
@@ -476,7 +470,7 @@ This demonstrated that Wazuh could identify changes to monitored files rather th
 
 # 🔗 Event Correlation
 
-Individual alerts become more valuable when they are examined together.
+Individual alerts become more useful when they are examined together.
 
 Phase 4 correlated multiple security-data sources:
 
@@ -524,13 +518,13 @@ The following commands were used to validate and troubleshoot the Wazuh platform
 sudo systemctl status wazuh-indexer
 ```
 
-Expected result:
+Expected:
 
 ```text
 active (running)
 ```
 
-The Wazuh Indexer stores and indexes security data used by the Wazuh platform.
+The Wazuh Indexer stores and indexes security data used by the platform.
 
 ---
 
@@ -540,7 +534,7 @@ The Wazuh Indexer stores and indexes security data used by the Wazuh platform.
 sudo systemctl status wazuh-manager
 ```
 
-Expected result:
+Expected:
 
 ```text
 active (running)
@@ -556,13 +550,13 @@ The Wazuh Manager receives and analyzes security telemetry from connected agents
 sudo systemctl status wazuh-dashboard
 ```
 
-Expected result:
+Expected:
 
 ```text
 active (running)
 ```
 
-This verifies the status of the web interface used by the SOC analyst.
+This verifies the web interface used by the SOC analyst.
 
 ---
 
@@ -572,7 +566,7 @@ This verifies the status of the web interface used by the SOC analyst.
 sudo systemctl status filebeat
 ```
 
-Expected result:
+Expected:
 
 ```text
 active (running)
@@ -588,25 +582,23 @@ Filebeat participates in the Wazuh data pipeline.
 sudo filebeat test output
 ```
 
-This command was used during troubleshooting to test Filebeat's configured connection to the Wazuh Indexer.
-
-Successful validation included:
+The test validates:
 
 ```text
-URL parsing
-      ↓
-Host parsing
-      ↓
-DNS lookup
-      ↓
-TCP connection
-      ↓
-TLS handshake
-      ↓
-Server communication
-
-      ✅
+URL Parsing
+     ↓
+Host Parsing
+     ↓
+DNS Lookup
+     ↓
+TCP Connection
+     ↓
+TLS Handshake
+     ↓
+Server Communication
 ```
+
+A successful result provides evidence that Filebeat can communicate with the configured indexer.
 
 ---
 
@@ -624,16 +616,14 @@ ss            Display network sockets
 -n            Numeric addresses and ports
 -t            TCP sockets
 -p            Process information
-grep 55000    Show port 55000
+grep 55000    Filter for Wazuh API port
 ```
 
-Port:
+The Wazuh API uses:
 
 ```text
-55000
+TCP 55000
 ```
-
-was confirmed listening during troubleshooting.
 
 ---
 
@@ -643,13 +633,11 @@ was confirmed listening during troubleshooting.
 sudo systemctl restart wazuh-dashboard
 ```
 
-Only the dashboard service was restarted instead of rebooting the entire Wazuh server.
-
-This helped recover the web interface while leaving the remaining security platform components operational.
+Only the affected dashboard service was restarted instead of rebooting the entire Wazuh server.
 
 ---
 
-## 📋 Service Validation Reference
+## 📋 Command Reference
 
 | Purpose | Command |
 |---|---|
@@ -666,6 +654,8 @@ This helped recover the web interface while leaving the remaining security platf
 # 🧪 Validation
 
 Phase 4 validated the complete centralized security-monitoring workflow.
+
+---
 
 ## Endpoint Connectivity
 
@@ -701,7 +691,7 @@ PAM: User login failed
 
 ## Windows Process Detection
 
-Windows process activity was visible through Wazuh and associated with process-detection telemetry including:
+Windows process activity was visible through Wazuh and associated with:
 
 ```text
 Rule 67027
@@ -713,7 +703,7 @@ Rule 67027
 
 ## File Integrity Monitoring
 
-Controlled file creation and modification generated FIM telemetry including:
+Controlled file creation and modification generated FIM telemetry associated with:
 
 ```text
 Rule 554
@@ -723,13 +713,29 @@ Rule 554
 
 ---
 
-## Security Alerts
+# 🚨 Wazuh Security Alerts
 
-### 📸 Evidence — Wazuh Security Alerts
+The Wazuh Security Events interface was used to review centralized endpoint detections.
+
+This view allowed the analyst to:
+
+- Review alert severity
+- Identify the affected endpoint
+- Review Wazuh rule information
+- Examine timestamps
+- Expand individual events
+- Investigate event details
+- Search related telemetry
+
+---
+
+## 📸 Evidence — Wazuh Security Alerts
 
 ![Wazuh Security Alerts](../images/phase4-alerts.png)
 
 The security-alert view provided centralized visibility into endpoint detections and allowed individual events to be expanded for investigation.
+
+**Result:** ✅ Security alerts successfully generated and investigated.
 
 ---
 
@@ -753,6 +759,8 @@ Something went wrong.
 
 Instead of reinstalling Wazuh, each platform component was checked independently.
 
+### Check Indexer
+
 ```bash
 sudo systemctl status wazuh-indexer
 ```
@@ -763,7 +771,7 @@ Result:
 active (running)
 ```
 
-Then:
+### Check Dashboard
 
 ```bash
 sudo systemctl status wazuh-dashboard
@@ -775,7 +783,7 @@ Result:
 active (running)
 ```
 
-Then:
+### Check Manager
 
 ```bash
 sudo systemctl status wazuh-manager
@@ -787,7 +795,7 @@ Result:
 active (running)
 ```
 
-Then:
+### Check Filebeat
 
 ```bash
 sudo systemctl status filebeat
@@ -799,13 +807,13 @@ Result:
 active (running)
 ```
 
-This demonstrated that the core Wazuh services were operational even though the web interface was displaying an error.
+This demonstrated that the core Wazuh services were operational even though the web interface displayed an error.
 
 ---
 
 ## Filebeat Pipeline Validation
 
-The next step was to test Filebeat's configured output:
+The next troubleshooting step was:
 
 ```bash
 sudo filebeat test output
@@ -832,7 +840,13 @@ The Wazuh API port was checked using:
 sudo ss -lntp | grep 55000
 ```
 
-Port `55000` was listening.
+Port:
+
+```text
+55000
+```
+
+was listening.
 
 This provided another layer of evidence that the Wazuh environment remained operational.
 
@@ -850,7 +864,9 @@ The dashboard recovered.
 
 The endpoint page initially continued to display an error, but after waiting and retrying, the interface loaded and displayed both active agents.
 
-### Troubleshooting Principle
+---
+
+## Troubleshooting Workflow
 
 ```text
 Dashboard Error
@@ -884,39 +900,9 @@ This avoided unnecessary reinstallation of the security platform.
 
 ---
 
-## Application Connectivity Troubleshooting
-
-Another lesson from the project was that application connectivity should be tested in layers:
-
-```text
-Client
-  │
-  ▼
-IP Connectivity
-  │
-  ▼
-Server Network Interface
-  │
-  ▼
-Service Status
-  │
-  ▼
-Listening Port
-  │
-  ▼
-TCP Connectivity
-  │
-  ▼
-Web Application
-```
-
-A running application service does not by itself prove that a client can successfully reach the application.
-
----
-
 # 💡 Lessons Learned
 
-## 1. A Web Interface Error Does Not Mean the Entire SIEM Failed
+## 1. A Dashboard Error Does Not Mean the Entire SIEM Failed
 
 When the Wazuh Dashboard showed an error, the underlying services remained operational.
 
@@ -926,7 +912,7 @@ The correct response was to validate each component rather than immediately rein
 
 ## 2. Troubleshoot Complex Platforms by Component
 
-Wazuh consists of multiple services.
+Wazuh consists of multiple interconnected services.
 
 ```text
 Dashboard
@@ -970,25 +956,30 @@ MITRE ATT&CK mapping helps categorize behavior.
 
 It does not automatically mean that every mapped event represents a real attack.
 
-The analyst must still evaluate the event in context.
+The analyst must still evaluate the activity in context.
 
 ---
 
 ## 5. File Integrity Monitoring Adds Another Detection Layer
 
-Authentication and process monitoring answer different questions than FIM.
+Authentication, process monitoring, and FIM answer different security questions.
 
 ```text
 Authentication
-     ↓
+     │
+     ▼
 Who attempted access?
 
+
 Process Monitoring
-     ↓
+     │
+     ▼
 What executed?
 
-FIM
-     ↓
+
+File Integrity Monitoring
+     │
+     ▼
 What file changed?
 ```
 
@@ -1004,21 +995,25 @@ A stronger validation method is:
 
 ```text
 Configure
-    ↓
+    │
+    ▼
 Generate Controlled Activity
-    ↓
+    │
+    ▼
 Detect
-    ↓
+    │
+    ▼
 Investigate
-    ↓
+    │
+    ▼
 Validate Evidence
 ```
 
 ---
 
-## 7. Correlation Provides Better Context Than Isolated Alerts
+## 7. Correlation Provides Better Context
 
-Multiple related events provide a more complete view of endpoint activity.
+Multiple related events provide a more complete view of endpoint activity than isolated alerts.
 
 This is one of the primary benefits of centralized SIEM monitoring.
 
@@ -1084,7 +1079,7 @@ This methodology became the foundation for later incident-response phases.
 
 # 📸 Evidence Summary
 
-The original Phase 4 screenshot files are reused in this reorganized documentation.
+The original Phase 4 screenshots are reused in this reorganized documentation.
 
 | # | Evidence | Existing Screenshot |
 |---|---|---|
@@ -1092,9 +1087,15 @@ The original Phase 4 screenshot files are reused in this reorganized documentati
 | 2 | Connected Wazuh Agents | `phase4-agents.png` |
 | 3 | Wazuh Security Alerts | `phase4-alerts.png` |
 
-No duplicate screenshots are required.
+### Image Paths Used
 
-These are the Phase 4 image filenames documented in the existing repository structure. :contentReference[oaicite:2]{index=2}
+```text
+../images/phase4-dashboard.png
+../images/phase4-agents.png
+../images/phase4-alerts.png
+```
+
+No duplicate screenshots are required.
 
 ---
 
@@ -1158,7 +1159,7 @@ Document Findings
        ✅
 ```
 
-Phase 4 moved the project beyond basic log collection and into actual centralized security monitoring and investigation.
+Phase 4 moved the project beyond basic log collection and into centralized security monitoring and investigation.
 
 The Wazuh SIEM/XDR environment was now ready to integrate network-based detection through Suricata.
 
