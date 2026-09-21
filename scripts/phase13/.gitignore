@@ -1,0 +1,17 @@
+# OAuth credentials — NEVER commit
+token.json
+credentials.json
+client_secret*.json
+
+# Python virtual environments
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Runtime / health logs
+*.log
+
+# Local secrets
+.env
+.env.*
