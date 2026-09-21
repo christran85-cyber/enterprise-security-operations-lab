@@ -1,0 +1,2 @@
+#!/bin/bash
+exec /opt/phase13-email-venv/bin/python3.14 /var/ossec/integrations/phase13-email/custom-phase13-email.py "$@"
