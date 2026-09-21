@@ -1,6 +1,6 @@
 # 🤖 Phase 13 — Python Security Automation & Automated SOC Email Alerting
 
-> **Objective:** Build a Python-based security automation workflow that processes security events, generates reports, integrates Wazuh with the Gmail API using OAuth 2.0, and automatically delivers SOC email notifications when qualifying Wazuh security events are detected.
+> **Objective:** Build a Python-based security automation workflow that processes structured security events, generates reports, integrates Wazuh with the Gmail API using OAuth 2.0, and automatically delivers SOC email notifications for qualifying Wazuh security events.
 
 [← Phase 12](phase-12-web-security.md) | [🏠 Main Project](../README.md) | [Phase 14 →](phase-14-end-to-end-soc-response.md)
 
@@ -20,10 +20,14 @@
 - [Gmail API Integration](#-gmail-api-integration)
 - [OAuth 2.0 Configuration](#-oauth-20-configuration)
 - [Gmail Send Scope](#-gmail-send-scope)
+- [Gmail API Alert Test](#-gmail-api-alert-test)
 - [Wazuh Email Integration](#-wazuh-email-integration)
+- [Integration Permissions](#-integration-permissions)
 - [Custom Wazuh Integration](#-custom-wazuh-integration)
-- [Automated Alert Workflow](#-automated-alert-workflow)
-- [End-to-End Validation](#-end-to-end-validation)
+- [Wazuh Integration Validation](#-wazuh-integration-validation)
+- [Wazuh Gmail API Validation](#-wazuh-gmail-api-validation)
+- [Automated Wazuh Email Alert](#-automated-wazuh-email-alert)
+- [End-to-End SOC Email Validation](#-end-to-end-soc-email-validation)
 - [Commands and Configuration](#-commands-and-configuration)
 - [Troubleshooting](#-troubleshooting)
 - [Security Considerations](#-security-considerations)
@@ -43,8 +47,8 @@
 | **Status** | ✅ Complete |
 | **Primary Language** | Python 3 |
 | **Security Data Format** | JSON |
-| **Reporting Format** | TXT / CSV |
-| **SIEM** | Wazuh |
+| **Reporting Formats** | TXT / CSV |
+| **SIEM/XDR** | Wazuh |
 | **Wazuh Server** | SOC-Wazuh `10.10.10.102` |
 | **Security Sources** | Wazuh / Suricata |
 | **Email Provider** | Gmail |
@@ -52,7 +56,7 @@
 | **Authentication** | OAuth 2.0 |
 | **OAuth Scope** | `gmail.send` |
 | **Wazuh Integration** | Custom Integration |
-| **Alert Threshold** | Wazuh Level 5+ |
+| **Alert Threshold** | Level 5+ |
 | **Python Environment** | Dedicated Virtual Environment |
 | **Primary Skill** | Security Automation |
 | **Final Validation** | Automated SOC Email Successfully Delivered |
@@ -65,7 +69,7 @@ Phase 13 introduced **Python security automation and automated SOC email alertin
 
 Previous phases established:
 
-- Endpoint monitoring
+- Endpoint security monitoring
 - Wazuh SIEM/XDR
 - Suricata IDS
 - Centralized logging
@@ -75,27 +79,30 @@ Previous phases established:
 - Incident response
 - Web application security assessment
 
-Phase 13 added an automated response layer.
+Phase 13 added an automation layer on top of those security capabilities.
 
-The phase began with structured security-event processing using:
+The phase began by processing structured security events using Python.
 
 ```text
+Security Events
+      │
+      ▼
 JSON
-  │
-  ▼
+      │
+      ▼
 Python
-  │
-  ├── Event Analysis
-  ├── Severity Classification
-  ├── Security Reporting
-  └── CSV Export
+      │
+      ├── Event Analysis
+      ├── Severity Classification
+      ├── Security Reporting
+      └── CSV Export
 ```
 
-The automation was then extended into Wazuh.
+The project was then extended into automated notification.
 
-A custom integration connected qualifying Wazuh alerts to a Python script using the Gmail API.
+A custom Wazuh integration connected qualifying security events to Python, which used the Gmail API and OAuth 2.0 to deliver SOC email alerts.
 
-The final workflow became:
+The final architecture became:
 
 ```text
 Security Event
@@ -107,7 +114,7 @@ Wazuh Detection
 Wazuh Integratord
       │
       ▼
-Custom Integration
+custom-phase13-email
       │
       ▼
 Python Automation
@@ -122,13 +129,40 @@ OAuth 2.0
 SOC Email Alert
 ```
 
-The completed phase demonstrated how security telemetry can move from passive monitoring into automated SOC notification.
+This phase demonstrated how security telemetry can move beyond passive monitoring into an automated notification workflow.
 
 ---
 
 # 🏗️ Automation Architecture
 
-The Phase 13 automation architecture was:
+Phase 13 contained two related automation workflows.
+
+## Security Event Analysis
+
+```text
+security_events.json
+        │
+        ▼
+analyze_events.py
+        │
+        ├── Parse Events
+        ├── Count Sources
+        ├── Count Severities
+        ├── Process Timestamps
+        ├── Display Events
+        └── Identify Alerts
+        │
+        ▼
+Security Report
+        │
+        ▼
+export_csv.py
+        │
+        ▼
+CSV Security Report
+```
+
+## Automated SOC Notification
 
 ```text
                 Security Events
@@ -151,7 +185,7 @@ The Phase 13 automation architecture was:
           custom-phase13-email
                      │
                      ▼
-          Python Email Automation
+           Python Automation
                      │
                      ▼
                  Gmail API
@@ -160,39 +194,17 @@ The Phase 13 automation architecture was:
                   OAuth 2.0
                      │
                      ▼
-             SOC Email Inbox
+              SOC Email Inbox
 ```
 
-A separate Python analysis workflow was also created:
-
-```text
-security_events.json
-        │
-        ▼
-analyze_events.py
-        │
-        ├── Count Events
-        ├── Group by Source
-        ├── Group by Severity
-        ├── Display Events
-        └── Identify Alerts
-        │
-        ▼
-Security Report
-        │
-        ▼
-export_csv.py
-        │
-        ▼
-CSV Security Report
-```
-
-Together, these workflows demonstrated both:
+Together, these workflows demonstrated:
 
 ```text
 Security Data Analysis
           +
-Automated SOC Notification
+Security Automation
+          +
+Automated Notification
 ```
 
 ---
@@ -205,30 +217,33 @@ Automated SOC Notification
 - [x] Build a Python security-event analyzer
 - [x] Count events by security source
 - [x] Count events by severity
+- [x] Process event timestamps
 - [x] Display individual event information
-- [x] Identify high-priority events
+- [x] Identify higher-priority security events
 - [x] Generate a security report
 - [x] Export security-event data to CSV
-- [x] Configure Gmail API access
+- [x] Enable the Gmail API
 - [x] Configure OAuth 2.0
 - [x] Apply least-privilege Gmail permissions
 - [x] Use the `gmail.send` scope
 - [x] Complete OAuth authorization
-- [x] Validate Gmail API email delivery
+- [x] Validate Gmail API delivery independently
 - [x] Create a dedicated Python environment
 - [x] Protect the OAuth token
 - [x] Create a custom Wazuh integration
+- [x] Configure integration permissions
 - [x] Configure Wazuh Integratord
 - [x] Trigger Python automation from Wazuh
-- [x] Generate an automated SOC email
-- [x] Validate end-to-end alert delivery
+- [x] Send automated security notifications
+- [x] Validate automated email delivery
+- [x] Validate the complete end-to-end workflow
 - [x] Document troubleshooting and lessons learned
 
 ---
 
 # 📁 Security Event Dataset
 
-A structured JSON dataset was created:
+A structured security-event dataset was created:
 
 ```text
 security_events.json
@@ -241,9 +256,19 @@ Suricata
 Wazuh
 ```
 
-The dataset provided structured fields that could be consumed by Python rather than manually reviewing individual logs.
+The purpose of the JSON file was to separate:
 
-The processing workflow was:
+```text
+Security Data
+```
+
+from:
+
+```text
+Automation Logic
+```
+
+The workflow was:
 
 ```text
 Security Events
@@ -258,15 +283,15 @@ Python
 Analysis
 ```
 
-Using JSON provided a structured method for passing security information between systems and automation scripts.
+Using JSON allowed the Python scripts to consume structured event information rather than relying on manually entered values.
 
 ---
 
 # ✅ JSON Validation
 
-Before processing the security-event dataset, the JSON structure was validated.
+Before processing the dataset, the JSON structure was validated.
 
-This was important because malformed JSON would prevent Python from correctly parsing the event data.
+This was important because malformed JSON would prevent Python from parsing the security events correctly.
 
 The validation workflow was:
 
@@ -299,21 +324,20 @@ The primary analysis script was:
 analyze_events.py
 ```
 
-The script processed the events stored in:
+The script processed events stored in:
 
 ```text
 security_events.json
 ```
 
-The automation analyzed:
+The Python automation performed operations including:
 
-- Event source
-- Severity
-- Timestamp
-- Event information
-- High-priority security events
-
-The script generated counts by source and severity and displayed individual event information.
+- Loading JSON security events
+- Counting events by source
+- Counting events by severity
+- Processing timestamps
+- Displaying individual event information
+- Identifying events requiring additional attention
 
 The workflow was:
 
@@ -331,7 +355,7 @@ analyze_events.py
         └── Identify Alerts
 ```
 
-This reduced the need to manually count and categorize security events.
+This demonstrated how Python can reduce repetitive manual security-event analysis.
 
 ## 📸 Evidence — Python Security Event Analysis
 
@@ -343,15 +367,13 @@ This reduced the need to manually count and categorize security events.
 
 # 📄 Security Report Generation
 
-The Python analysis was extended to generate a security report.
+The Python analysis was extended to generate an analyst-readable security report.
 
 The report file was:
 
 ```text
 phase13-security-report.txt
 ```
-
-The report summarized the analyzed security-event information in a format that could be reviewed independently of the Python script.
 
 The workflow became:
 
@@ -365,7 +387,7 @@ Python Analysis
 Security Report
 ```
 
-This demonstrated how automated security analysis can generate analyst-readable output.
+This demonstrated how automated security analysis can generate reusable reporting output.
 
 ## 📸 Evidence — Security Report
 
@@ -383,21 +405,13 @@ A second Python script was created:
 export_csv.py
 ```
 
-The script exported structured security-event information into:
+The script exported the structured security-event information into:
 
 ```text
 phase13-security-events.csv
 ```
 
-CSV provides a format that can be used by:
-
-- Spreadsheet applications
-- Reporting systems
-- Additional Python scripts
-- Data-analysis platforms
-- Security reporting workflows
-
-The automation path became:
+The workflow was:
 
 ```text
 security_events.json
@@ -409,6 +423,14 @@ export_csv.py
 phase13-security-events.csv
 ```
 
+CSV output makes security data easier to reuse in:
+
+- Spreadsheet applications
+- Data-analysis workflows
+- Reporting systems
+- Additional Python scripts
+- Security metrics and dashboards
+
 ## 📸 Evidence — CSV Security Report
 
 ![Phase 13 CSV Security Report](../images/phase13-csv-security-report.png)
@@ -419,9 +441,9 @@ phase13-security-events.csv
 
 # 📧 Gmail API Integration
 
-The next stage extended the automation from local analysis into automated email notification.
+The next stage extended the automation from local event processing into automated email notification.
 
-Instead of using a traditional Gmail application password, Phase 13 used:
+Instead of storing a Gmail password or application password inside the automation, the project used:
 
 ```text
 Gmail API
@@ -429,19 +451,19 @@ Gmail API
 OAuth 2.0
 ```
 
-A Google Cloud project was configured for the integration:
+A Google Cloud project was configured:
 
 ```text
 SOC Security Automation
 ```
 
-The Gmail API was enabled for the project.
+The Gmail API was enabled for this project.
 
 ## 📸 Evidence — Gmail API Enabled
 
 ![Phase 13 Gmail API Enabled](../images/phase13-gmail-api-enabled.png)
 
-This provided the API interface used by the Python automation.
+The Gmail API provided the interface through which Python could programmatically send the SOC notification.
 
 **Result:** ✅ Gmail API enabled.
 
@@ -449,29 +471,29 @@ This provided the API interface used by the Python automation.
 
 # 🔐 OAuth 2.0 Configuration
 
-OAuth 2.0 was used to authorize the Python automation.
+OAuth 2.0 was used to authorize the Python application.
 
-The authorization model avoided storing the Gmail account password inside the Python script.
+This allowed the application to use Gmail API functionality without embedding the Gmail account password inside the script.
 
-The workflow was:
+The authorization model was:
 
 ```text
-Python Script
-     │
-     ▼
+Python Application
+        │
+        ▼
 OAuth 2.0
-     │
-     ▼
+        │
+        ▼
 Google Authorization
-     │
-     ▼
-Access Token
-     │
-     ▼
+        │
+        ▼
+OAuth Token
+        │
+        ▼
 Gmail API
 ```
 
-The OAuth consent configuration was set up for the security automation project.
+The OAuth consent configuration was established for the security automation project.
 
 During testing, the authorization flow used:
 
@@ -479,52 +501,54 @@ During testing, the authorization flow used:
 flow.run_local_server(port=0)
 ```
 
-This opened a local authorization workflow and returned credentials to the Python application after successful authentication.
+The browser-based authentication process completed successfully after the account was added as an authorized test user.
 
-A test user was added to the OAuth configuration to permit authorization while the application remained in testing mode.
+The resulting OAuth token was then used by the automation for Gmail API authorization.
 
 ---
 
 # 🔑 Gmail Send Scope
 
-The automation was configured with the least-privilege Gmail scope required for the project:
+The integration followed the principle of least privilege.
+
+The automation only needed to send email.
+
+Therefore, the OAuth scope was restricted to:
 
 ```text
 gmail.send
 ```
-
-The automation did not require broad mailbox access.
 
 The permission model was:
 
 ```text
-Automation Requirement
-        │
-        ▼
-Send Security Email
-        │
-        ▼
+Required Function
+       │
+       ▼
+Send SOC Alert
+       │
+       ▼
 gmail.send
 ```
+
+The application did not require broad mailbox-reading permissions.
 
 ## 📸 Evidence — Gmail OAuth Send Scope
 
 ![Phase 13 Gmail OAuth Send Scope](../images/phase13-gmail-oauth-send-scope.png)
 
-This demonstrated the principle of least privilege.
-
-**Result:** ✅ OAuth scope limited to email sending.
+**Result:** ✅ Gmail API permission limited to email sending.
 
 ---
 
 # 🧪 Gmail API Alert Test
 
-Before connecting the email automation directly to Wazuh, Gmail API delivery was tested independently.
+Before integrating Gmail with Wazuh, email delivery was tested independently.
 
-This separated:
+This was an important troubleshooting strategy because it separated:
 
 ```text
-Email/API Problem
+Python / Gmail Problem
 ```
 
 from:
@@ -533,7 +557,7 @@ from:
 Wazuh Integration Problem
 ```
 
-The test validated:
+The independent test validated:
 
 ```text
 Python
@@ -552,39 +576,39 @@ Email Delivery
 
 ![Phase 13 Gmail API Alert Success](../images/phase13-gmail-api-alert-success.png)
 
-**Result:** ✅ Python successfully sent a security email using Gmail API.
+**Result:** ✅ Python successfully sent an email using Gmail API.
 
 ---
 
-# 📬 Security Alert Received
+# 📬 Gmail Security Alert Received
 
-The test message was verified in the destination mailbox.
+The message was verified in the receiving mailbox.
 
 ## 📸 Evidence — Gmail Security Alert Received
 
 ![Phase 13 Gmail Security Alert Received](../images/phase13-gmail-security-alert-received.png)
 
-This proved that:
+This independently confirmed that:
 
 - OAuth authentication worked
 - Gmail API access worked
-- Python could construct the message
-- Gmail accepted the request
-- The destination mailbox received the security notification
+- Python constructed the message
+- Gmail accepted the API request
+- The receiving mailbox received the message
+
+At this point, Gmail API functionality was validated before introducing Wazuh into the workflow.
 
 ---
 
 # 🔗 Wazuh Email Integration
 
-After validating Gmail API delivery independently, the Python automation was connected to Wazuh.
+After independently validating Gmail API delivery, the Python automation was connected to Wazuh.
 
-The integration directory included:
+The integration directory was:
 
 ```text
 /var/ossec/integrations/phase13-email/
 ```
-
-The environment contained the Python Gmail automation and OAuth credentials required for sending alerts.
 
 Important components included:
 
@@ -594,11 +618,35 @@ token.json
 venv/
 ```
 
-The OAuth token was protected because it provides authorization to the Gmail API.
+The components served different purposes:
 
-A dedicated Python environment was also used for the integration.
+```text
+gmail_api_alert.py
+        │
+        └── Python email automation
 
-The final integration path was:
+token.json
+        │
+        └── OAuth authorization token
+
+venv/
+        │
+        └── Dedicated Python environment
+```
+
+The custom Wazuh integration executable was:
+
+```text
+/var/ossec/integrations/custom-phase13-email
+```
+
+The Wazuh configuration was maintained in:
+
+```text
+/var/ossec/etc/ossec.conf
+```
+
+The completed integration path became:
 
 ```text
 Wazuh
@@ -618,21 +666,64 @@ Gmail API
 
 ---
 
+# 🔐 Integration Permissions
+
+The custom integration required the correct Linux ownership and executable permissions before Wazuh Integratord could invoke it successfully.
+
+This was an important distinction because:
+
+```text
+Script Works Manually
+        ≠
+Script Works Through Wazuh
+```
+
+The execution chain involved:
+
+```text
+Wazuh Alert
+     │
+     ▼
+Integratord
+     │
+     ▼
+Custom Script
+     │
+     ▼
+Linux Permissions
+     │
+     ▼
+Python Environment
+     │
+     ▼
+OAuth Token
+```
+
+The executable bit and integration permissions were validated as part of troubleshooting.
+
+## 📸 Evidence — Wazuh Email Integration Permissions
+
+![Phase 13 Wazuh Email Integration Permissions](../images/phase13-wazuh-email-integration-permissions.png)
+
+**Result:** ✅ Integration permissions and execution requirements validated.
+
+---
+
 # ⚙️ Custom Wazuh Integration
 
-A custom Wazuh executable was configured:
+The custom executable used by Wazuh was:
 
 ```text
 /var/ossec/integrations/custom-phase13-email
 ```
 
-The custom integration acted as the connection between:
+Its role was to bridge:
 
 ```text
 Wazuh Integratord
 ```
 
-and:
+with:
 
 ```text
 Python Email Automation
@@ -644,17 +735,11 @@ The integration was configured in:
 /var/ossec/etc/ossec.conf
 ```
 
-The configuration allowed qualifying Wazuh alerts to invoke the custom email integration.
+for qualifying Wazuh alerts.
 
-The alert threshold was configured for:
+The project used a Level 5+ threshold and JSON alert format.
 
-```text
-Level 5+
-```
-
-and JSON alert data was passed into the integration workflow.
-
-Conceptually:
+Conceptually, the configuration followed:
 
 ```xml
 <integration>
@@ -664,7 +749,7 @@ Conceptually:
 </integration>
 ```
 
-The integration workflow was:
+The workflow became:
 
 ```text
 Wazuh Alert
@@ -679,14 +764,87 @@ Integratord
 custom-phase13-email
     │
     ▼
-Python Script
+Python Automation
 ```
 
 ---
 
-# 🔔 Automated Alert Workflow
+# 🔗 Wazuh Integration Validation
 
-Once the custom integration was operational, the full pipeline became:
+After configuring the custom executable and its permissions, the Wazuh-to-Python integration was tested.
+
+This validation was important because manually executing the Python script only proved:
+
+```text
+Python → Gmail
+```
+
+It did not prove:
+
+```text
+Wazuh → Python
+```
+
+The integration test established:
+
+```text
+Wazuh
+  │
+  ▼
+Integratord
+  │
+  ▼
+Custom Integration
+  │
+  ▼
+Python
+```
+
+## 📸 Evidence — Wazuh Email Integration Success
+
+![Phase 13 Wazuh Email Integration Success](../images/phase13-wazuh-email-integration-success.png)
+
+**Result:** ✅ Wazuh successfully invoked the custom email integration.
+
+---
+
+# 📧 Wazuh Gmail API Validation
+
+The next validation confirmed that the Wazuh-triggered Python workflow could successfully communicate with Gmail.
+
+The tested chain was:
+
+```text
+Wazuh
+   │
+   ▼
+Custom Integration
+   │
+   ▼
+Python
+   │
+   ▼
+OAuth 2.0
+   │
+   ▼
+Gmail API
+```
+
+## 📸 Evidence — Wazuh Gmail API Alert Success
+
+![Phase 13 Wazuh Gmail API Alert Success](../images/phase13-wazuh-gmail-api-alert-success.png)
+
+**Result:** ✅ Wazuh-triggered Gmail API workflow validated.
+
+---
+
+# 🔔 Automated Wazuh Email Alert
+
+After validating the integration layers, Wazuh could automatically pass qualifying alerts into the Python notification workflow.
+
+The process no longer required an analyst to manually execute the email script.
+
+Instead:
 
 ```text
 Security Event
@@ -695,76 +853,58 @@ Security Event
 Wazuh Detection
       │
       ▼
-Alert Level Evaluation
+Automatic Integration
       │
       ▼
-Wazuh Integratord
+Python
       │
       ▼
-custom-phase13-email
-      │
-      ▼
-gmail_api_alert.py
-      │
-      ▼
-OAuth Token
-      │
-      ▼
-Gmail API
-      │
-      ▼
-SOC Security Email
+Email Notification
 ```
 
-This transformed Wazuh from a system that required an analyst to manually inspect the dashboard into one capable of automatically notifying the SOC through email.
+## 📸 Evidence — Wazuh Automated Email Alert
+
+![Phase 13 Wazuh Automated Email Alert](../images/phase13-wazuh-automated-email-alert.png)
+
+**Result:** ✅ Wazuh automation successfully reached the email notification stage.
 
 ---
 
-# 📬 Automated SOC Email Alert
+# 📬 Automated Gmail Alert Validation
 
-A qualifying event was used to validate automated alert delivery.
+The resulting automated Gmail notification was successfully delivered.
 
-The resulting message included live security-alert information such as:
+## 📸 Evidence — Wazuh Automated Gmail Alert Success
 
-- Severity
-- Source
-- Event description
-- Source IP when available
-- Destination IP when available
-- Phase identification
+![Phase 13 Wazuh Automated Gmail Alert Success](../images/phase13-wazuh-automated-gmail-alert-success.png)
 
-## 📸 Evidence — Automated SOC Email Alert Delivery
+This demonstrated successful communication through:
 
-![Phase 13 Automated SOC Email Alert Delivery](../images/phase13-automated-soc-email-alert-delivery.png)
+```text
+Wazuh
+   ↓
+Python
+   ↓
+OAuth
+   ↓
+Gmail API
+   ↓
+Mailbox
+```
 
-This evidence demonstrates successful automated SOC notification delivery.
-
----
-
-# 📩 SOC Email Alert Received
-
-The resulting alert was also verified from the receiving mailbox.
-
-## 📸 Evidence — SOC Email Alert Received
-
-![Phase 13 SOC Email Alert Received](../images/phase13-soc-email-alert-received.png)
-
-**Result:** ✅ Automated security notification successfully received.
+**Result:** ✅ Automated Wazuh-triggered Gmail notification delivered.
 
 ---
 
-# 🔄 End-to-End Validation
+# 🔄 End-to-End SOC Email Validation
 
-The final Phase 13 validation demonstrated the complete automation pipeline.
+The final Phase 13 validation tested the complete automation pipeline.
 
 ```text
 Security Event
       │
       ▼
-Wazuh
-      │
-      ▼
-Security Detection
+Wazuh Detection
       │
       ▼
 Wazuh Integratord
@@ -776,28 +916,40 @@ custom-phase13-email
 Python Automation
       │
       ▼
-Gmail API
-      │
-      ▼
 OAuth 2.0
       │
       ▼
-SOC Email Alert
+Gmail API
+      │
+      ▼
+SOC Email Inbox
 
       ✅
 ```
 
-This demonstrated that the components were not merely working independently.
+The resulting SOC notification contained security-alert information passed through the integration.
 
-They were functioning as one integrated security automation pipeline.
+## 📸 Evidence — Automated SOC Email Alert Delivery
+
+![Phase 13 Automated SOC Email Alert Delivery](../images/phase13-automated-soc-email-alert-delivery.png)
+
+---
+
+## 📸 Evidence — SOC Email Alert Received
+
+![Phase 13 SOC Email Alert Received](../images/phase13-soc-email-alert-received.png)
+
+The successful delivery demonstrated that the individual components were operating together as one automated SOC notification pipeline.
+
+**Result:** ✅ End-to-end automated SOC email alerting validated.
 
 ---
 
 # 💻 Commands and Configuration
 
-Phase 13 involved Python, Linux, Wazuh, OAuth, and Gmail API configuration.
+Phase 13 involved Python, JSON, Linux, Wazuh, OAuth, and Gmail API configuration.
 
-## JSON Event File
+## Security Event Dataset
 
 ```text
 security_events.json
@@ -807,7 +959,7 @@ Purpose:
 
 ```text
 Store structured Suricata and Wazuh security events
-for automated Python processing.
+for Python processing.
 ```
 
 ---
@@ -823,7 +975,7 @@ Purpose:
 ```text
 Parse security events, count events by source and
 severity, process timestamps, display event details,
-and identify security alerts.
+and identify events requiring attention.
 ```
 
 ---
@@ -837,8 +989,7 @@ export_csv.py
 Purpose:
 
 ```text
-Export security-event data into a structured CSV
-report.
+Export structured security-event information into CSV.
 ```
 
 ---
@@ -861,11 +1012,11 @@ phase13-security-events.csv
 
 ## Wazuh Integration Directory
 
-```bash
+```text
 /var/ossec/integrations/phase13-email/
 ```
 
-The integration directory contained components including:
+Important components:
 
 ```text
 gmail_api_alert.py
@@ -877,23 +1028,19 @@ venv/
 
 ## Custom Wazuh Integration
 
-```bash
+```text
 /var/ossec/integrations/custom-phase13-email
 ```
-
-The custom executable was given the required execution permissions so Wazuh Integratord could invoke it.
 
 ---
 
 ## Wazuh Configuration
 
-The integration was configured in:
-
-```bash
+```text
 /var/ossec/etc/ossec.conf
 ```
 
-Conceptual configuration:
+Conceptual integration configuration:
 
 ```xml
 <integration>
@@ -907,21 +1054,36 @@ Conceptual configuration:
 
 ## OAuth Authorization
 
-The local OAuth flow used:
+The local OAuth authorization flow used:
 
 ```python
 flow.run_local_server(port=0)
 ```
 
-The browser-based authorization flow generated the credentials required by the automation.
+After successful browser authorization, the OAuth token could be reused by the Python automation.
+
+---
+
+## Gmail OAuth Scope
+
+```text
+gmail.send
+```
+
+Purpose:
+
+```text
+Allow the security automation to send email
+without granting unnecessary mailbox permissions.
+```
 
 ---
 
 # 🔧 Troubleshooting
 
-Phase 13 involved troubleshooting across several independent technologies.
+Phase 13 involved troubleshooting across several technologies.
 
-This made it one of the most technically involved phases of the project.
+The complexity of the integration made layered troubleshooting especially important.
 
 ---
 
@@ -929,35 +1091,41 @@ This made it one of the most technically involved phases of the project.
 
 During development, Python formatting and f-string issues were corrected.
 
-The script was retested after each correction.
-
-The process reinforced:
+The development cycle followed:
 
 ```text
-Write
-  │
-  ▼
+Write Code
+    │
+    ▼
 Execute
-  │
-  ▼
+    │
+    ▼
 Read Error
-  │
-  ▼
-Correct
-  │
-  ▼
+    │
+    ▼
+Correct Code
+    │
+    ▼
 Retest
 ```
+
+This reinforced the importance of validating each automation component incrementally.
 
 ---
 
 ## 2. OAuth 403 Access Denied
 
-The initial OAuth authorization attempt returned an access-denied response.
+The initial OAuth authorization attempt returned:
 
-The issue was resolved by adding the Gmail account as an authorized test user in the OAuth consent configuration.
+```text
+403 Access Denied
+```
 
-The troubleshooting path was:
+The OAuth consent configuration was reviewed.
+
+The Gmail account was added as an authorized test user.
+
+The flow then became:
 
 ```text
 OAuth Request
@@ -966,7 +1134,7 @@ OAuth Request
 403 Access Denied
      │
      ▼
-Review Consent Configuration
+Review OAuth Configuration
      │
      ▼
 Add Test User
@@ -978,57 +1146,70 @@ Retry Authentication
 Authorization Successful
 ```
 
+**Result:** OAuth authorization completed successfully.
+
 ---
 
 ## 3. OAuth Credential Handling
 
-During early testing, an authentication-flow issue occurred around credential initialization.
+An early authentication-flow issue occurred around credential initialization.
 
-The OAuth flow and credential handling were corrected before continuing.
+The credential and authorization flow was corrected before Wazuh integration continued.
 
-This reinforced the importance of testing the API independently before adding Wazuh to the workflow.
+Testing Gmail independently proved especially useful because it prevented Wazuh from being incorrectly blamed for an OAuth problem.
 
 ---
 
-## 4. Integration Permissions
+## 4. Wazuh Integration Permissions
 
-At one point the Wazuh integration produced no visible output.
+At one point the custom Wazuh integration produced no visible output.
 
-Permissions and executable status were checked.
-
-The integration required the correct Linux execution permissions so Wazuh could invoke the script.
-
-The troubleshooting process was:
+The investigation checked:
 
 ```text
-Wazuh Alert
-    │
-    ▼
-Integration Called?
-    │
-    ▼
-Executable?
-    │
-    ▼
-Permissions Correct?
-    │
-    ▼
-Python Environment Available?
-    │
-    ▼
-OAuth Token Accessible?
-    │
-    ▼
-Gmail API Request
+Integration File
+      │
+      ▼
+Executable Bit
+      │
+      ▼
+Permissions
+      │
+      ▼
+Execution Context
+      │
+      ▼
+Python Environment
+      │
+      ▼
+OAuth Token
 ```
 
-After correcting the execution environment and permissions, validation passed.
+Correcting the execution environment and permissions allowed the integration to operate successfully.
 
 ---
 
-## 5. Test Components Independently
+## 5. Manual Execution vs Automated Execution
 
-A major troubleshooting improvement was separating the system into layers.
+The email script successfully worked when executed manually.
+
+However:
+
+```text
+Manual Success
+      ≠
+Wazuh Automation Success
+```
+
+Wazuh still needed permission to execute the integration and access the required environment.
+
+Both workflows were therefore tested independently.
+
+---
+
+## 6. Layered Troubleshooting
+
+The complete integration was divided into layers:
 
 ```text
 Layer 1
@@ -1040,11 +1221,11 @@ Python
    │
    ▼
 Layer 3
-Gmail API
+OAuth
    │
    ▼
 Layer 4
-OAuth
+Gmail API
    │
    ▼
 Layer 5
@@ -1052,58 +1233,66 @@ Wazuh Integration
    │
    ▼
 Layer 6
-End-to-End Alert
+Automated Delivery
 ```
 
-Each component was validated independently before testing the complete pipeline.
+Each layer was validated before proceeding to the next.
 
-This made it easier to identify which layer was responsible for a failure.
+This significantly reduced troubleshooting complexity.
 
 ---
 
 # 🔐 Security Considerations
 
-The email automation was implemented with several security considerations.
+Security automation can create additional security risk if credentials or permissions are handled incorrectly.
+
+Phase 13 therefore included several security controls.
+
+---
 
 ## Least Privilege
 
-The Gmail API scope was restricted to:
+The Gmail OAuth scope was limited to:
 
 ```text
 gmail.send
 ```
 
-rather than granting broad mailbox access.
+The automation did not require permission to read the mailbox.
 
 ---
 
 ## OAuth Instead of Password Storage
 
-The automation used:
+The integration used:
 
 ```text
 OAuth 2.0
 ```
 
-rather than embedding a Gmail account password in the Python script.
+instead of embedding an email account password directly inside the Python script.
 
 ---
 
-## Token Protection
+## OAuth Token Protection
 
-The OAuth token stored under the Wazuh integration environment was treated as a protected credential.
+The integration used:
 
 ```text
 token.json
 ```
 
-should not be published to GitHub.
+for OAuth authorization.
+
+This file should be treated as sensitive.
+
+It should never be published to a public GitHub repository.
 
 ---
 
 ## Git Repository Protection
 
-Credential files should be excluded from source control.
+Credential files should be excluded from version control.
 
 For example:
 
@@ -1113,13 +1302,23 @@ credentials.json
 *.secret
 ```
 
-The portfolio should demonstrate the integration without exposing authentication credentials.
+The portfolio can demonstrate the integration architecture without exposing authentication material.
 
 ---
 
 ## Dedicated Python Environment
 
-A dedicated Python environment reduced dependency conflicts and separated the automation dependencies from the system Python environment.
+A dedicated Python environment helped isolate dependencies required by the email automation.
+
+This reduced dependency conflicts with system Python packages.
+
+---
+
+## Integration Permissions
+
+Only the permissions necessary for Wazuh to execute the integration should be granted.
+
+Overly broad permissions should be avoided.
 
 ---
 
@@ -1127,9 +1326,9 @@ A dedicated Python environment reduced dependency conflicts and separated the au
 
 ## 1. JSON and Python Serve Different Roles
 
-JSON stored structured security data.
+JSON stores structured information.
 
-Python processed and acted on that data.
+Python performs logic against that information.
 
 ```text
 JSON
@@ -1143,22 +1342,25 @@ Python
 
 ---
 
-## 2. Automation Reduces Manual SOC Work
+## 2. Automation Reduces Repetitive SOC Work
 
-Instead of manually reviewing every event, Python can:
+Python can automatically:
 
 - Parse events
-- Categorize them
-- Count them
-- Identify important events
+- Categorize events
+- Count events
+- Identify higher-priority events
 - Generate reports
+- Export data
 - Trigger notifications
+
+This allows analysts to spend more time investigating rather than manually processing repetitive information.
 
 ---
 
 ## 3. APIs Connect Independent Systems
 
-The Gmail API allowed the Python security automation to communicate with Gmail programmatically.
+The Gmail API allowed the Python automation to communicate programmatically with Gmail.
 
 ```text
 Python
@@ -1172,29 +1374,31 @@ Gmail
 
 ---
 
-## 4. OAuth Is Authorization, Not the Email Service
+## 4. OAuth and Gmail API Perform Different Functions
+
+OAuth controls authorization.
 
 The Gmail API performs the email operation.
-
-OAuth 2.0 controls whether the application is authorized to perform that operation.
 
 ```text
 OAuth
   │
-  └── Permission
+  └── Authorization
 
 Gmail API
   │
-  └── Action
+  └── Email Operation
 ```
+
+Understanding this distinction made troubleshooting easier.
 
 ---
 
-## 5. Least Privilege Applies to APIs
+## 5. Least Privilege Applies to API Integrations
 
-The automation required the ability to send mail.
+The automation needed to send email.
 
-It did not require full access to the mailbox.
+It did not need broad mailbox access.
 
 Therefore:
 
@@ -1206,111 +1410,140 @@ was the appropriate scope.
 
 ---
 
-## 6. Test Integrations in Layers
+## 6. Test Components Independently
 
-The most effective development process was:
+The most effective implementation process was:
 
 ```text
 Test JSON
     ↓
 Test Python
     ↓
-Test Gmail API
-    ↓
 Test OAuth
+    ↓
+Test Gmail API
     ↓
 Test Wazuh Integration
     ↓
-Test Full Pipeline
+Test Automated Delivery
 ```
 
-Testing everything simultaneously would have made troubleshooting much harder.
+Testing the entire system at once would have made troubleshooting significantly harder.
 
 ---
 
 ## 7. Linux Permissions Matter in Automation
 
-A script that works manually may still fail when executed by another service.
+A script that works for an administrator may fail when executed by a service.
 
-Execution context and permissions must be validated.
+The execution context matters.
 
----
-
-## 8. Successful Manual Execution Does Not Prove Automation
-
-Manually running the email script demonstrated that Python and Gmail worked.
-
-It did not prove Wazuh could automatically invoke the integration.
-
-Both tests were necessary.
+This became especially important when Wazuh Integratord attempted to invoke the custom integration.
 
 ---
 
-## 9. Successful Wazuh Detection Does Not Prove Email Delivery
+## 8. Manual Success Does Not Prove Automation
+
+Successfully running:
+
+```text
+Python → Gmail
+```
+
+did not prove:
+
+```text
+Wazuh → Python → Gmail
+```
+
+Both had to be tested.
+
+---
+
+## 9. Wazuh Detection Does Not Prove Email Delivery
 
 Likewise:
 
 ```text
 Wazuh Alert Generated
         ≠
-Email Delivered
+SOC Email Delivered
 ```
 
-The entire chain had to be validated.
+Every layer of the notification pipeline required validation.
 
 ---
 
-## 10. End-to-End Testing Is Critical
+## 10. End-to-End Testing Provides the Strongest Evidence
 
-The strongest evidence was the final result:
+The strongest validation was:
 
 ```text
 Security Event
       ↓
 Wazuh
       ↓
-Integration
+Integratord
+      ↓
+Custom Integration
       ↓
 Python
+      ↓
+OAuth
       ↓
 Gmail API
       ↓
 SOC Inbox
 ```
 
-Each layer contributed to the successful automation.
+This demonstrated that all components worked together.
 
 ---
 
-## 11. Credentials Should Never Be Stored in Portfolio Code
+## 11. Credentials Should Never Be Published
 
-OAuth tokens and client credentials should remain protected and excluded from public repositories.
+OAuth tokens and client credentials provide access to external services.
 
-A portfolio should demonstrate architecture and implementation without exposing secrets.
+They must remain outside public source-control repositories.
+
+Portfolio documentation should show:
+
+```text
+Architecture
+Configuration Method
+Validation
+Results
+```
+
+without publishing secrets.
 
 ---
 
-## 12. Security Automation Still Requires Human Investigation
+## 12. Automation Does Not Replace Investigation
 
-The email alert improves response time, but it does not replace analyst judgment.
-
-The automated workflow:
+The automation performs:
 
 ```text
-Detects
+Detect
    ↓
-Notifies
+Process
+   ↓
+Notify
 ```
 
-The analyst still:
+The analyst still performs:
 
 ```text
-Validates
+Validate
    ↓
-Investigates
+Investigate
    ↓
-Responds
+Respond
+   ↓
+Document
 ```
+
+The automation improves response time but does not replace analyst judgment.
 
 ---
 
@@ -1321,26 +1554,26 @@ Responds
 | **Python** | Built security-event automation |
 | **JSON** | Structured security-event data |
 | **CSV** | Exported security reporting data |
-| **Security Automation** | Automated event processing and notification |
-| **Wazuh** | Integrated SIEM alerts with custom automation |
-| **Wazuh Integratord** | Triggered external security workflow |
-| **Linux** | Configured scripts, directories, and permissions |
-| **Gmail API** | Sent programmatic security notifications |
-| **OAuth 2.0** | Implemented delegated API authorization |
-| **Least Privilege** | Limited API scope to `gmail.send` |
-| **API Integration** | Connected Python with Gmail |
-| **Virtual Environments** | Isolated Python dependencies |
+| **Security Automation** | Automated processing and notification |
+| **Wazuh** | Connected SIEM alerts to custom automation |
+| **Wazuh Integratord** | Triggered external notification workflow |
+| **Linux** | Managed directories, scripts, and permissions |
+| **Gmail API** | Sent programmatic SOC notifications |
+| **OAuth 2.0** | Implemented API authorization |
+| **Least Privilege** | Limited Gmail access to `gmail.send` |
+| **API Integration** | Connected Python automation with Gmail |
+| **Python Virtual Environments** | Isolated automation dependencies |
 | **Credential Security** | Protected OAuth tokens |
-| **Alert Engineering** | Converted Wazuh events into SOC notifications |
-| **Troubleshooting** | Diagnosed Python, OAuth, permissions, and integration issues |
-| **End-to-End Testing** | Validated complete automated workflow |
-| **SOC Operations** | Improved alert visibility and response workflow |
+| **Alert Engineering** | Converted security events into notifications |
+| **Troubleshooting** | Diagnosed Python, OAuth, permission, and integration issues |
+| **End-to-End Testing** | Validated the complete automated workflow |
+| **SOC Operations** | Improved security-event notification capability |
 
 ---
 
 # 📸 Evidence Summary
 
-The Phase 13 screenshots already stored in the repository include:
+Phase 13 contains **15 screenshots** covering the complete development, API, integration, and automation workflow.
 
 | # | Evidence | Screenshot |
 |---|---|---|
@@ -1349,19 +1582,24 @@ The Phase 13 screenshots already stored in the repository include:
 | 3 | Security Report | `phase13-security-report.png` |
 | 4 | CSV Security Report | `phase13-csv-security-report.png` |
 | 5 | Gmail API Enabled | `phase13-gmail-api-enabled.png` |
-| 6 | Gmail OAuth Send Scope | `phase13-gmail-oauth-send-scope.png` |
-| 7 | Gmail API Alert Success | `phase13-gmail-api-alert-success.png` |
+| 6 | Gmail OAuth `gmail.send` Scope | `phase13-gmail-oauth-send-scope.png` |
+| 7 | Gmail API Alert Test | `phase13-gmail-api-alert-success.png` |
 | 8 | Gmail Security Alert Received | `phase13-gmail-security-alert-received.png` |
-| 9 | Automated SOC Email Alert Delivery | `phase13-automated-soc-email-alert-delivery.png` |
-| 10 | SOC Email Alert Received | `phase13-soc-email-alert-received.png` |
+| 9 | Wazuh Integration Permissions | `phase13-wazuh-email-integration-permissions.png` |
+| 10 | Wazuh Email Integration Success | `phase13-wazuh-email-integration-success.png` |
+| 11 | Wazuh Gmail API Alert Success | `phase13-wazuh-gmail-api-alert-success.png` |
+| 12 | Wazuh Automated Email Alert | `phase13-wazuh-automated-email-alert.png` |
+| 13 | Wazuh Automated Gmail Alert Success | `phase13-wazuh-automated-gmail-alert-success.png` |
+| 14 | Automated SOC Email Alert Delivery | `phase13-automated-soc-email-alert-delivery.png` |
+| 15 | SOC Email Alert Received | `phase13-soc-email-alert-received.png` |
 
-Because this document is stored under:
+Because this document is located inside:
 
 ```text
 docs/
 ```
 
-the correct image path is:
+all screenshot paths use:
 
 ```text
 ../images/<filename>
@@ -1370,18 +1608,18 @@ the correct image path is:
 For example:
 
 ```markdown
-![Phase 13 Automated SOC Alert](../images/phase13-automated-soc-email-alert-delivery.png)
+![Phase 13 Automated SOC Email](../images/phase13-automated-soc-email-alert-delivery.png)
 ```
 
-No existing screenshot needs to be renamed.
+The existing screenshot files do not need to be renamed.
 
 ---
 
 # 💾 VirtualBox Snapshot
 
-Phase 13 changed the Wazuh environment significantly because the custom email integration, Python environment, OAuth token, and Wazuh configuration were installed there.
+Phase 13 significantly modified SOC-Wazuh because the custom integration, Python environment, OAuth token, and Wazuh configuration were installed there.
 
-The completed state should be preserved on:
+The completed environment should therefore be preserved on:
 
 ```text
 SOC-Wazuh
@@ -1399,25 +1637,26 @@ Phase 13 - Automated SOC Email Alerting Complete
 Phase 13 completed.
 
 Implemented Python security automation and automated
-SOC email notification.
+SOC email alerting.
 
-Completed:
+Validated:
 - JSON security-event processing
-- Python event analysis
-- Security report generation
-- CSV export
+- Python security-event analysis
+- TXT security reporting
+- CSV security reporting
 - Gmail API configuration
 - OAuth 2.0 authorization
 - gmail.send least-privilege scope
-- Dedicated Python email environment
+- Dedicated Python environment
 - Protected OAuth token
-- Custom Wazuh email integration
+- Wazuh email integration permissions
+- Wazuh custom integration execution
 - Wazuh Integratord configuration
-- Level 5+ JSON alert integration
-- Automated Gmail API security notification
-- End-to-end SOC email alert validation
+- Gmail API communication
+- Automated Wazuh email notification
+- Automated SOC email delivery
 
-Validated pipeline:
+Final pipeline:
 
 Security Event
 → Wazuh Detection
@@ -1428,7 +1667,7 @@ Security Event
 → SOC Email Alert
 ```
 
-> The VirtualBox snapshot is a VM recovery checkpoint and does not need to exist as a PNG inside the GitHub `images` folder unless a separate screenshot of the VirtualBox snapshot was intentionally captured.
+> **Note:** The VirtualBox snapshot is a VM recovery checkpoint. It does not need to appear as a PNG in the GitHub `images` directory unless a separate screenshot of the VirtualBox snapshot was intentionally captured.
 
 ---
 
@@ -1455,7 +1694,7 @@ Python
       └── CSV Export
 ```
 
-The second workflow integrated the automation directly with Wazuh:
+The second workflow integrated automation directly with Wazuh:
 
 ```text
 Security Event
@@ -1473,10 +1712,10 @@ custom-phase13-email
 Python Automation
       │
       ▼
-Gmail API
+OAuth 2.0
       │
       ▼
-OAuth 2.0
+Gmail API
       │
       ▼
 SOC Email Alert
@@ -1484,14 +1723,12 @@ SOC Email Alert
       ✅
 ```
 
-The final automated email contained live alert fields from the Wazuh integration, proving that the notification pipeline operated end to end.
-
-Phase 13 demonstrated:
+The phase demonstrated:
 
 - Structured security-event processing
-- Python security automation
-- JSON parsing
-- Automated reporting
+- JSON validation
+- Python event analysis
+- Automated security reporting
 - CSV export
 - API integration
 - OAuth 2.0 authorization
@@ -1500,13 +1737,26 @@ Phase 13 demonstrated:
 - Linux permissions management
 - Automated SOC notification
 - Credential protection
-- End-to-end security workflow validation
+- Layered troubleshooting
+- End-to-end security automation validation
 
-The completed workflow was:
+The final workflow was:
 
-**Detect → Process → Analyze → Integrate → Notify → Validate**
+```text
+Detect
+   ↓
+Process
+   ↓
+Analyze
+   ↓
+Integrate
+   ↓
+Notify
+   ↓
+Validate
+```
 
-This automation prepared the lab for the final phase, where the previously built security controls are combined into a complete SOC incident-detection and response workflow.
+This automation prepared the lab for the final phase, where the major security controls developed throughout the project are combined into a complete SOC incident-detection and response workflow.
 
 ---
 
@@ -1514,25 +1764,28 @@ This automation prepared the lab for the final phase, where the previously built
 
 ## Phase 14 — End-to-End SOC Incident Detection, Correlation & Response
 
-Phase 14 combines the major components developed throughout the project.
+Phase 14 combines the major technologies and workflows developed throughout the Enterprise Security Operations Lab.
 
-The final workflow includes:
+The final phase includes:
 
-- Controlled reconnaissance
+- Controlled Nmap reconnaissance
 - Controlled SSH authentication failures
 - Suricata detection
-- Wazuh detection
-- Level 10 correlation
+- Wazuh SSH detection
+- Wazuh Level 10 correlation
 - MITRE ATT&CK mapping
 - Automated SOC notification capability
 - DFIR-IRIS case management
-- Asset and IOC documentation
-- Incident timeline
+- Asset documentation
+- IOC documentation
+- Incident timeline reconstruction
 - Investigation tasks
-- Containment and remediation assessment
+- Containment assessment
+- Remediation assessment
+- Recovery assessment
 - Formal incident closure
 
-The final phase demonstrates the complete SOC lifecycle:
+The final SOC workflow becomes:
 
 ```text
 Generate
@@ -1551,6 +1804,8 @@ Document
    ↓
 Close
 ```
+
+Phase 14 demonstrates how the individual technologies implemented throughout the project operate together as an integrated security operations environment.
 
 ---
 
