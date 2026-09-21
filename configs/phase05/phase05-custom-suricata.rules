@@ -1,0 +1,12 @@
+# Phase 05 — Suricata IDS Custom Detection Rules
+# Enterprise Security Operations Lab
+#
+# Source: SOC-Kali   10.10.10.103
+# Target: SOC-Ubuntu 10.50.20.100
+#
+# Original OPNsense rule location:
+# /usr/local/etc/suricata/opnsense.rules/OPNsense.rules
+
+alert ip 10.10.10.103 any -> 10.50.20.100 any (msg:"Internal Recon - Kali to Ubuntu"; sid:4294967293; rev:1;)
+
+alert ip 10.10.10.103 any -> 10.50.20.100 any (msg:"Kali to Ubuntu Http Detection"; sid:4294967292; rev:1;)
