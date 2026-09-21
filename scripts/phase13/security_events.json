@@ -1,0 +1,47 @@
+[
+  {
+    "timestamp": "2026-09-14T20:15:10",
+    "source_ip": "10.10.10.103",
+    "destination_ip": "10.50.20.100",
+    "source": "Suricata",
+    "event_type": "Network Reconnaissance",
+    "severity": "Medium",
+    "description": "Nmap scan detected from SOC-Kali to SOC-Ubuntu"
+  },
+  {
+    "timestamp": "2026-09-14T20:16:32",
+    "source_ip": "10.10.10.103",
+    "destination_ip": "10.50.20.100",
+    "source": "Suricata",
+    "event_type": "HTTP Probe",
+    "severity": "Low",
+    "description": "HTTP probing activity detected against SOC-Ubuntu"
+  },
+  {
+    "timestamp": "2026-09-14T20:20:45",
+    "source_ip": "10.50.20.100",
+    "destination_ip": "10.10.10.102",
+    "source": "Wazuh",
+    "event_type": "Authentication Failure",
+    "severity": "Medium",
+    "description": "Repeated PAM authentication failure detected"
+  },
+  {
+    "timestamp": "2026-09-14T20:25:03",
+    "source_ip": "10.10.10.103",
+    "destination_ip": "10.50.20.100",
+    "source": "Suricata",
+    "event_type": "Web Application Scan",
+    "severity": "Medium",
+    "description": "Web vulnerability scanning activity detected"
+  },
+  {
+    "timestamp": "2026-09-14T20:20:18",
+    "source_ip": "10.10.10.103",
+    "destination_ip": "10.10.10.102",
+    "source": "Wazuh",
+    "event_type": "File Integrity Change",
+    "severity": "Low",
+    "description": "Monitored file modification detected"
+  }
+]
